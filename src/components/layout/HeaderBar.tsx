@@ -1,6 +1,7 @@
-import { Bell, Users, BarChart3, Settings, LogOut } from "lucide-react";
+import { Bell, Users, BarChart3, Settings, LogOut, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface HeaderBarProps {
   userRole: string;
@@ -16,6 +18,8 @@ interface HeaderBarProps {
 }
 
 export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
+  const { theme, setTheme } = useTheme();
+
   return (
     <header className="h-16 border-b bg-card flex items-center justify-between px-6 sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-card/95">
       <div className="flex items-center gap-4">
@@ -31,6 +35,16 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Theme Toggle */}
+        <div className="flex items-center gap-2">
+          <Sun className="w-4 h-4" />
+          <Switch
+            checked={theme === "dark"}
+            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+          />
+          <Moon className="w-4 h-4" />
+        </div>
+
         {/* Notifications */}
         <Button variant="ghost" size="sm" className="relative">
           <Bell className="w-4 h-4" />

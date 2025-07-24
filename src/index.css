@@ -79,9 +79,43 @@
   }
 
   .dark {
-    /* Already set in main theme - application uses dark theme by default */
     --background: 220 13% 9%;
     --foreground: 210 40% 98%;
+    --card: 220 13% 12%;
+    --card-foreground: 210 40% 98%;
+    --primary: 200 95% 65%;
+    --primary-foreground: 220 13% 9%;
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 13% 25%;
+    --muted-foreground: 215 16% 65%;
+    --accent: 200 95% 65%;
+    --accent-foreground: 220 13% 9%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 13% 25%;
+    --input: 220 13% 20%;
+    --ring: 200 95% 65%;
+  }
+
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --primary: 200 95% 35%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 200 95% 35%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 200 95% 35%;
   }
 }
 
@@ -95,8 +129,4 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
   
-  /* Force dark theme for professional NPS dashboard */
-  html {
-    @apply dark;
-  }
 }
