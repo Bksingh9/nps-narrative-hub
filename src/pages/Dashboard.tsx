@@ -6,6 +6,8 @@ import { TrendPanel } from "@/components/dashboard/TrendPanel";
 import { DriverPanel } from "@/components/dashboard/DriverPanel";
 import { StoreTable } from "@/components/dashboard/StoreTable";
 import { NarrativeCard } from "@/components/dashboard/NarrativeCard";
+import { FilterBar } from "@/components/dashboard/FilterBar";
+import { AIInsightsPanel } from "@/components/dashboard/AIInsightsPanel";
 
 interface DashboardProps {
   userRole?: "admin" | "user" | "store_manager";
@@ -37,13 +39,16 @@ export default function Dashboard({ userRole = "admin" }: DashboardProps) {
             </div>
           </div>
 
+          {/* Filter Bar */}
+          <FilterBar />
+
           {/* KPI Strip */}
           <KpiStrip />
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             {/* Trend Analysis */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="xl:col-span-2 space-y-6">
               <TrendPanel />
               {userRole !== "store_manager" && <DriverPanel />}
             </div>
@@ -54,6 +59,11 @@ export default function Dashboard({ userRole = "admin" }: DashboardProps) {
               
               {/* Store Performance Table */}
               <StoreTable userRole={userRole} />
+            </div>
+
+            {/* AI Insights & Escalations */}
+            <div className="xl:col-span-1">
+              <AIInsightsPanel />
             </div>
           </div>
         </main>
