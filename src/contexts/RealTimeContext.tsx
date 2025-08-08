@@ -34,9 +34,15 @@ const defaultConfig: RealTimeConfig = {
 
 export function RealTimeProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<RealTimeConfig>(() => {
-    // Load from localStorage if available
+    // Load from localStorage if available and revive Date fields
     const saved = localStorage.getItem('realtime-config');
-    return saved ? { ...defaultConfig, ...JSON.parse(saved) } : defaultConfig;
+    if (!saved) return defaultConfig;
+    const parsed = JSON.parse(saved);
+    const revived = {
+      ...parsed,
+      lastUpdated: parsed?.lastUpdated ? new Date(parsed.lastUpdated) : null,
+    } as Partial<RealTimeConfig>;
+    return { ...defaultConfig, ...revived } as RealTimeConfig;
   });
   
   const [isRefreshing, setIsRefreshing] = useState(false);
