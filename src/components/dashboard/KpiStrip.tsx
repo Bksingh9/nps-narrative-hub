@@ -97,7 +97,7 @@ export function KpiStrip() {
           </span>
           {config.lastUpdated && (
             <span className="text-xs text-muted-foreground">
-              Last updated: {config.lastUpdated.toLocaleTimeString()}
+              Last updated: {new Date(config.lastUpdated).toLocaleTimeString?.() || ''}
             </span>
           )}
         </div>

@@ -22,9 +22,9 @@ interface EscalationMetric {
 
 export function AIInsightsPanel() {
   const { filters } = useFilters();
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(() => !!localStorage.getItem('openai_api_key'));
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Mock escalation metrics - would be fetched from API in real implementation
@@ -73,13 +73,18 @@ export function AIInsightsPanel() {
 
   const handleConnectAPI = async () => {
     if (!apiKey.trim()) return;
-    
-    setIsAnalyzing(true);
-    // Simulate API connection
-    setTimeout(() => {
-      setIsConnected(true);
+    try {
+      // Persist key locally (frontend-only). For production, move to Supabase secrets.
+      localStorage.setItem('openai_api_key', apiKey.trim());
+      setIsAnalyzing(true);
+      // lightweight test call via aiService fallback path happens elsewhere; here we just mark connected
+      setTimeout(() => {
+        setIsConnected(true);
+        setIsAnalyzing(false);
+      }, 600);
+    } catch {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   const getSeverityColor = (severity: string) => {
@@ -114,13 +119,13 @@ export function AIInsightsPanel() {
           {!isConnected ? (
             <>
               <div className="space-y-2">
-                <Label htmlFor="apiKey">Anthropic API Key</Label>
+                <Label htmlFor="apiKey">OpenAI API Key</Label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
                       id="apiKey"
                       type={showApiKey ? "text" : "password"}
-                      placeholder="sk-ant-..."
+                      placeholder="sk-..."
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
                     />
@@ -145,7 +150,7 @@ export function AIInsightsPanel() {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  For production use, store your API key securely in Supabase Edge Function Secrets.
+                  For production, store your key securely in Supabase Edge Function Secrets. Frontend storage is for development only.
                 </AlertDescription>
               </Alert>
             </>
@@ -159,6 +164,7 @@ export function AIInsightsPanel() {
                 onClick={() => {
                   setIsConnected(false);
                   setApiKey('');
+                  localStorage.removeItem('openai_api_key');
                 }}
               >
                 Disconnect

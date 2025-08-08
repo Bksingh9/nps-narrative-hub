@@ -31,7 +31,23 @@ const initialFilters: FilterState = {
 };
 
 export function FilterProvider({ children }: { children: ReactNode }) {
-  const [filters, setFilters] = useState<FilterState>(initialFilters);
+  const [filters, setFilters] = useState<FilterState>(() => {
+    const saved = localStorage.getItem('nps-filters');
+    if (!saved) return initialFilters;
+    try {
+      const parsed = JSON.parse(saved);
+      return {
+        ...initialFilters,
+        ...parsed,
+        dateRange: {
+          from: parsed?.dateRange?.from ? new Date(parsed.dateRange.from) : undefined,
+          to: parsed?.dateRange?.to ? new Date(parsed.dateRange.to) : undefined,
+        },
+      } as FilterState;
+    } catch {
+      return initialFilters;
+    }
+  });
 
   const updateDateRange = (range: DateRange) => {
     setFilters(prev => ({ ...prev, dateRange: range }));
@@ -52,6 +68,17 @@ export function FilterProvider({ children }: { children: ReactNode }) {
   const resetFilters = () => {
     setFilters(initialFilters);
   };
+
+  React.useEffect(() => {
+    const toSave = {
+      ...filters,
+      dateRange: {
+        from: filters.dateRange.from ? filters.dateRange.from.toISOString() : undefined,
+        to: filters.dateRange.to ? filters.dateRange.to.toISOString() : undefined,
+      },
+    };
+    localStorage.setItem('nps-filters', JSON.stringify(toSave));
+  }, [filters]);
 
   return (
     <FilterContext.Provider

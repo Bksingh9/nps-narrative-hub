@@ -42,7 +42,7 @@ export default function Settings() {
     refreshData 
   } = useRealTime();
 
-  const [localApiKey, setLocalApiKey] = useState(config.apiKey);
+  const [localApiKey, setLocalApiKey] = useState<string>(localStorage.getItem('openai_api_key') || config.apiKey);
   const [localApiEndpoint, setLocalApiEndpoint] = useState(config.apiEndpoint);
 
   const handleLogout = () => {
@@ -50,11 +50,13 @@ export default function Settings() {
   };
 
   const handleSaveApiConfig = () => {
-    updateConfig({
-      apiKey: localApiKey,
-      apiEndpoint: localApiEndpoint
-    });
-    toast.success("API configuration saved");
+    if (localApiKey) {
+      localStorage.setItem('openai_api_key', localApiKey);
+    } else {
+      localStorage.removeItem('openai_api_key');
+    }
+    updateConfig({ apiKey: localApiKey, apiEndpoint: localApiEndpoint });
+    toast.success('API configuration saved');
   };
 
   const handleTestConnection = async () => {
@@ -193,16 +195,16 @@ export default function Settings() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="api-key">API Key</Label>
+                  <Label htmlFor="api-key">OpenAI API Key</Label>
                   <Input 
                     id="api-key" 
                     type="password"
-                    placeholder="Enter your API key"
+                    placeholder="sk-..."
                     value={localApiKey}
                     onChange={(e) => setLocalApiKey(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Keep your API key secure and never share it
+                    For production, store this in Supabase Secrets and call via Edge Functions
                   </p>
                 </div>
                 
@@ -211,7 +213,7 @@ export default function Settings() {
                     variant="outline" 
                     className="flex-1"
                     onClick={handleTestConnection}
-                    disabled={!localApiEndpoint || !localApiKey}
+                    disabled={!localApiKey}
                   >
                     <TestTube className="w-4 h-4 mr-2" />
                     Test Connection

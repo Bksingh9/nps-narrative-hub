@@ -70,75 +70,63 @@ export class AIService {
   }
 
   private async analyzeWithDirectAPI(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
-    if (!this.apiKey) {
-      return {
-        success: false,
-        error: 'No API key provided'
-      };
+    // Prefer key from ctor, else fallback to localStorage
+    const key = this.apiKey || localStorage.getItem('openai_api_key');
+    if (!key) {
+      return { success: false, error: 'No API key provided' };
     }
 
     try {
-      let systemPrompt = "";
-      let userPrompt = "";
+      let systemPrompt = '';
+      let userPrompt = '';
 
       switch (request.analysisType) {
         case 'insights':
-          systemPrompt = "You are an expert retail analyst specializing in NPS data. Provide actionable insights based on the provided data.";
-          userPrompt = `Analyze this NPS data and provide key insights:\n${JSON.stringify(request.data, null, 2)}\n\nFilters applied: ${JSON.stringify(request.filters, null, 2)}\n\nProvide 3-5 bullet points with specific recommendations.`;
+          systemPrompt = 'You are an expert retail analyst specializing in NPS data. Provide actionable insights based on the provided data.';
+          userPrompt = `Analyze this NPS data and provide key insights:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters applied: ${JSON.stringify(request.filters)}\n\nProvide 3-5 bullet points with specific recommendations.`;
           break;
-        
         case 'escalation':
-          systemPrompt = "You are a retail operations expert. Identify critical issues that require immediate escalation based on NPS data patterns.";
-          userPrompt = `Review this data for critical issues requiring escalation:\n${JSON.stringify(request.data, null, 2)}\n\nFilters: ${JSON.stringify(request.filters, null, 2)}\n\nIdentify issues with severity levels and recommended actions.`;
+          systemPrompt = 'You are a retail operations expert. Identify critical issues that require immediate escalation based on NPS data patterns.';
+          userPrompt = `Review this data for critical issues requiring escalation:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters: ${JSON.stringify(request.filters)}\n\nIdentify issues with severity levels and recommended actions.`;
           break;
-          
         case 'trends':
-          systemPrompt = "You are a data scientist specializing in trend analysis. Identify patterns and predict future trends in NPS data.";
-          userPrompt = `Analyze trends in this data:\n${JSON.stringify(request.data, null, 2)}\n\nFilters: ${JSON.stringify(request.filters, null, 2)}\n\nProvide trend analysis and forecasting insights.`;
+          systemPrompt = 'You are a data scientist specializing in trend analysis. Identify patterns and predict future trends in NPS data.';
+          userPrompt = `Analyze trends in this data:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters: ${JSON.stringify(request.filters)}\n\nProvide trend analysis and forecasting insights.`;
           break;
       }
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01'
+          'Authorization': `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 1000,
+          model: 'gpt-4o-mini',
           temperature: 0.3,
-          system: systemPrompt,
           messages: [
-            {
-              role: 'user',
-              content: userPrompt
-            }
-          ]
-        })
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`Anthropic API error: ${response.statusText}`);
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
       }
 
       const aiResponse = await response.json();
-      const analysis = aiResponse.content[0].text;
+      const analysis = aiResponse?.choices?.[0]?.message?.content ?? '';
 
       return {
         success: true,
         analysis,
         analysisType: request.analysisType,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-
     } catch (error) {
-      console.error('Error calling Anthropic API directly:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
-      };
+      console.error('Error calling OpenAI API directly:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
     }
   }
 
