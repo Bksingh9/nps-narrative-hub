@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Upload as UploadIcon, FileText, Clock, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 import Papa from 'papaparse';
-
+import { setRecords, safeGetRecords } from "@/lib/data";
+import { toast } from "sonner";
 interface NpsRow {
   "Response Date": string;
   State: string;
@@ -41,9 +42,32 @@ export default function Upload() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [history, setHistory] = useState<UploadItem[]>(loadHistory());
-  const [totalRecords, setTotalRecords] = useState(loadRecords().length);
+  const [totalRecords, setTotalRecords] = useState(safeGetRecords().length);
 
   const handleLogout = () => {};
+
+  // Schema-agnostic normalizer for CSV rows
+  const normalizeRow = (r: any) => {
+    const get = (obj: any, keys: string[]) => keys.find(k => obj[k] !== undefined);
+    const dateKey = get(r, ["Response Date","Survey Date","Submission Time","Timestamp","Date"]);
+    const npsKey  = get(r, ["NPS Score","NPS_Score","NPS","Overall Rating","Rating","Score"]);
+    const stateKey = get(r, ["State","STATE"]);
+    const regionKey = get(r, ["Region","REGION","Zone","Cluster","Area"]);
+    const cityKey = get(r, ["City","CITY","Town","Location"]);
+    const storeKey = get(r, ["Store Code","Store_ID","Outlet Code","Location Code","Store","Outlet"]);
+    const commentsKey = get(r, ["Comments","Feedback","Remark","Observation"]);
+    const rawScore = npsKey ? r[npsKey] : undefined;
+    const parsedScore = typeof rawScore === 'number' ? rawScore : parseFloat(String(rawScore ?? '').replace(/[, ]/g,''));
+    return {
+      responseDate: dateKey ? r[dateKey] : undefined,
+      state: (stateKey ? r[stateKey] : '').toString().trim(),
+      region: (regionKey ? r[regionKey] : '').toString().trim(),
+      city: (cityKey ? r[cityKey] : '').toString().trim(),
+      storeCode: String(storeKey ? r[storeKey] : '').trim(),
+      nps: Number.isFinite(parsedScore) ? parsedScore : undefined,
+      comments: commentsKey ? r[commentsKey] : undefined,
+    };
+  };
 
   const dedupeMerge = (existing: any[], incoming: any[]) => {
     const seen = new Set(existing.map(r => JSON.stringify(r)));
@@ -57,25 +81,24 @@ export default function Upload() {
     }
     return merged;
   };
-
   const parseAndPersist = async (files: FileList) => {
     const start = performance.now();
     const allNew: any[] = [];
 
     for (const file of Array.from(files)) {
       const text = await file.text();
-      const result = Papa.parse<NpsRow>(text, { header: true, skipEmptyLines: true });
-      const rows = (result.data || []).filter(r => r && r["Response Date"] && r["NPS Score"] !== undefined);
-      const normalized = rows.map(r => ({
-        responseDate: r["Response Date"],
-        state: (r.State || '').toString().trim(),
-        region: (r.Region || '').toString().trim(),
-        city: (r.City || '').toString().trim(),
-        storeCode: String(r["Store Code"]).trim(),
-        nps: Number(r["NPS Score"]),
-        raw: r,
-      }));
-      allNew.push(...normalized);
+      const result = Papa.parse<any>(text, { header: true, skipEmptyLines: true, dynamicTyping: true, transformHeader: (h) => h.trim() });
+      const rows = (result.data || []) as any[];
+      let added = 0;
+      for (const r of rows) {
+        if (!r) continue;
+        const norm = normalizeRow(r);
+        if (norm.responseDate && norm.nps !== undefined) {
+          (r as any)._normalized = norm;
+          allNew.push(r);
+          added++;
+        }
+      }
 
       // update history entry for this file
       const item: UploadItem = {
@@ -83,7 +106,7 @@ export default function Upload() {
         filename: file.name,
         date: new Date().toLocaleString(),
         status: 'completed',
-        records: normalized.length,
+        records: added,
         processing_time: `${Math.max(1, Math.round((performance.now()-start)/1000))}s`
       };
       setHistory(prev => {
@@ -94,10 +117,11 @@ export default function Upload() {
     }
 
     // Merge and persist records
-    const existing = loadRecords();
+    const existing = safeGetRecords();
     const merged = dedupeMerge(existing, allNew);
-    saveRecords(merged);
+    setRecords(merged);
     setTotalRecords(merged.length);
+    toast.success(`Saved dataset: ${merged.length.toLocaleString()} records`);
   };
 
   const handleFileUpload = (files: FileList | null) => {
@@ -183,6 +207,9 @@ export default function Upload() {
               <div className="mt-6 p-4 bg-background/50 rounded-lg">
                 <h4 className="font-medium mb-2">Current dataset</h4>
                 <p className="text-sm text-muted-foreground">{totalRecords.toLocaleString()} records stored locally</p>
+                <div className="mt-3">
+                  <Button variant="outline" size="sm" onClick={() => { const rows = safeGetRecords(); setRecords(rows); toast.success(`Saved dataset: ${rows.length.toLocaleString()} records`); }}>Save Data</Button>
+                </div>
               </div>
             </CardContent>
           </Card>
