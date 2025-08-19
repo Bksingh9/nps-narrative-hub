@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test NPS Dashboard Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+        }
+        .credentials {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 NPS Dashboard - Login Test</h1>
+        
+        <div class="credentials">
+            <h3>📝 Test Credentials:</h3>
+            <ul>
+                <li><strong>Admin:</strong> <code>admin@trends.com</code> / <code>admin123</code></li>
+                <li><strong>Manager:</strong> <code>manager@trends.com</code> / <code>manager123</code></li>
+                <li><strong>User:</strong> <code>user@trends.com</code> / <code>user123</code></li>
+            </ul>
+        </div>
+
+        <div>
+            <button onclick="clearAndOpen()">🔐 Clear Auth & Open App</button>
+            <button onclick="checkStatus()">✅ Check Auth Status</button>
+            <button onclick="directLogin()">🚪 Go Direct to Login</button>
+        </div>
+
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            const color = type === 'error' ? '#ff6b6b' : type === 'success' ? '#51cf66' : '#74c0fc';
+            status.innerHTML = `<div style="color: ${color}"><strong>${new Date().toLocaleTimeString()}</strong>: ${message}</div>` + status.innerHTML;
+        }
+
+        function clearAndOpen() {
+            // Clear all auth data
+            localStorage.removeItem('nps_auth_token');
+            localStorage.removeItem('nps_current_user');
+            sessionStorage.clear();
+            
+            updateStatus('✅ Authentication cleared', 'success');
+            updateStatus('🔄 Opening app in 2 seconds...', 'info');
+            
+            setTimeout(() => {
+                window.open('http://localhost:8081/', '_blank');
+                updateStatus('🚀 App opened! You should see the login page.', 'success');
+            }, 2000);
+        }
+
+        function checkStatus() {
+            const token = localStorage.getItem('nps_auth_token');
+            const user = localStorage.getItem('nps_current_user');
+            
+            if (token && user) {
+                const userData = JSON.parse(user);
+                updateStatus(`✅ Logged in as: ${userData.name} (${userData.role})`, 'success');
+            } else {
+                updateStatus('❌ Not authenticated', 'error');
+            }
+        }
+
+        function directLogin() {
+            window.open('http://localhost:8081/login', '_blank');
+            updateStatus('🚪 Opened login page directly', 'info');
+        }
+
+        // Check status on load
+        window.onload = () => {
+            checkStatus();
+            updateStatus('🎯 Ready to test login flow', 'info');
+        };
+    </script>
+</body>
+</html> 

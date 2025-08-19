@@ -10,6 +10,7 @@ export interface FilterState {
   selectedStore: string;
   selectedState: string;
   selectedRegion: string;
+  selectedCity: string;
 }
 
 interface FilterContextType {
@@ -18,6 +19,7 @@ interface FilterContextType {
   updateStore: (store: string) => void;
   updateState: (state: string) => void;
   updateRegion: (region: string) => void;
+  updateCity: (city: string) => void;
   resetFilters: () => void;
 }
 
@@ -27,7 +29,8 @@ const initialFilters: FilterState = {
   dateRange: { from: undefined, to: undefined },
   selectedStore: '',
   selectedState: '',
-  selectedRegion: ''
+  selectedRegion: '',
+  selectedCity: ''
 };
 
 export function FilterProvider({ children }: { children: ReactNode }) {
@@ -65,6 +68,10 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     setFilters(prev => ({ ...prev, selectedRegion: region }));
   };
 
+  const updateCity = (city: string) => {
+    setFilters(prev => ({ ...prev, selectedCity: city }));
+  };
+
   const resetFilters = () => {
     setFilters(initialFilters);
   };
@@ -88,6 +95,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         updateStore,
         updateState,
         updateRegion,
+        updateCity,
         resetFilters
       }}
     >

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kafka Messages - CSV Download</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .stats {
+            background: #f7f9fc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e1e8ed;
+        }
+        
+        .stat-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .download-section {
+            margin-top: 30px;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin: 10px;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .secondary-btn {
+            background: #f7f9fc;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .secondary-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin-top: 30px;
+            text-align: left;
+            border-radius: 5px;
+        }
+        
+        .info-box h3 {
+            color: #1e40af;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .info-box p {
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .file-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="file-icon">CSV</div>
+        <h1>Kafka Messages Export</h1>
+        <p class="subtitle">Your Kafka messages have been successfully converted to CSV format</p>
+        
+        <div class="stats">
+            <div class="stat-row">
+                <span class="stat-label">Source:</span>
+                <span class="stat-value">Kafka UI - Payment Status Topic</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Total Messages:</span>
+                <span class="stat-value">74 records</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">File Size:</span>
+                <span class="stat-value">~29 KB</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Format:</span>
+                <span class="stat-value">CSV (Comma Separated Values)</span>
+            </div>
+        </div>
+        
+        <div class="download-section">
+            <a href="kafka_messages.csv" download="kafka_messages.csv" class="download-btn">
+                📥 Download CSV File
+            </a>
+            <a href="filtered.json" download="filtered.json" class="download-btn secondary-btn">
+                📄 Download Original JSON
+            </a>
+        </div>
+        
+        <div class="info-box">
+            <h3>ℹ️ About this export</h3>
+            <p>
+                This CSV file contains payment status messages from the Kafka topic 
+                <strong>fynd-json-gringotts-payment_status</strong>. 
+                The data includes order IDs, payment details, user information, and transaction metadata.
+                You can open this file in Excel, Google Sheets, or any spreadsheet application for analysis.
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

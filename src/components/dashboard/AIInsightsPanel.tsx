@@ -1,88 +1,164 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Brain, Key, AlertTriangle, TrendingUp, Eye, EyeOff } from "lucide-react";
+import { Sparkles, AlertTriangle, Brain, Key, Eye, EyeOff, Loader2, TrendingUp } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useFilters } from "@/contexts/FilterContext";
+import { AIService } from "@/lib/aiService";
+import { toast } from "sonner";
 
 interface EscalationMetric {
   id: string;
   title: string;
-  severity: 'critical' | 'high' | 'medium';
-  store: string;
-  state: string;
-  region: string;
+  severity: "critical" | "high" | "medium" | "low";
+  store?: string;
+  state?: string;
+  region?: string;
   description: string;
   aiRecommendation: string;
   timestamp: string;
 }
 
+// Function to load NPS records from localStorage
+const loadNpsRecords = (): any[] => {
+  try {
+    return JSON.parse(localStorage.getItem('nps-records') || '[]');
+  } catch {
+    return [];
+  }
+};
+
 export function AIInsightsPanel() {
   const { filters } = useFilters();
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
+  const [apiKey, setApiKey] = useState(() => {
+    // Load the API key from localStorage on component mount
+    return localStorage.getItem('openai_api_key') || '';
+  });
   const [showApiKey, setShowApiKey] = useState(false);
   const [isConnected, setIsConnected] = useState(() => !!localStorage.getItem('openai_api_key'));
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiInsights, setAiInsights] = useState<string>("");
+  const [escalationMetrics, setEscalationMetrics] = useState<EscalationMetric[]>([]);
+  const [npsData, setNpsData] = useState<any[]>([]);
 
-  // Mock escalation metrics - would be fetched from API in real implementation
-  const escalationMetrics: EscalationMetric[] = [
-    {
-      id: '1',
-      title: 'Critical NPS Drop',
-      severity: 'critical',
-      store: 'Downtown Mumbai',
-      state: 'Maharashtra',
-      region: 'West India',
-      description: 'NPS dropped by 15 points in the last 7 days',
-      aiRecommendation: 'Immediate staff retraining required. Customer complaints show pattern in service quality.',
-      timestamp: '2 hours ago'
-    },
-    {
-      id: '2',
-      title: 'Product Availability Issues',
-      severity: 'high',
-      store: 'Tech Park Bangalore',
-      state: 'Karnataka',
-      region: 'South India',
-      description: 'Multiple out-of-stock complaints affecting customer satisfaction',
-      aiRecommendation: 'Optimize inventory management and supplier relationships for key products.',
-      timestamp: '4 hours ago'
-    },
-    {
-      id: '3',
-      title: 'Regional Performance Decline',
-      severity: 'medium',
-      store: 'All Stores',
-      state: 'Tamil Nadu',
-      region: 'South India',
-      description: 'Overall regional performance trending downward',
-      aiRecommendation: 'Conduct regional analysis and implement best practices from high-performing regions.',
-      timestamp: '1 day ago'
+  // Load NPS data on mount and listen for updates
+  useEffect(() => {
+    const loadData = () => {
+      const records = loadNpsRecords();
+      setNpsData(records);
+    };
+    
+    loadData();
+    
+    // Listen for data updates
+    const handleDataUpdate = () => {
+      loadData();
+    };
+    
+    window.addEventListener('nps-data-updated', handleDataUpdate);
+    
+    return () => {
+      window.removeEventListener('nps-data-updated', handleDataUpdate);
+    };
+  }, []);
+
+  // Check for API key on mount
+  useEffect(() => {
+    const savedKey = localStorage.getItem('openai_api_key');
+    if (savedKey) {
+      setApiKey(savedKey);
+      setIsConnected(true);
     }
-  ];
+  }, []);
 
   const filteredMetrics = escalationMetrics.filter(metric => {
-    if (filters.selectedStore && metric.store !== filters.selectedStore && metric.store !== 'All Stores') return false;
-    if (filters.selectedState && metric.state !== filters.selectedState) return false;
-    if (filters.selectedRegion && metric.region !== filters.selectedRegion) return false;
+    if (filters.selectedStore && metric.store && metric.store !== filters.selectedStore) return false;
+    if (filters.selectedState && metric.state && metric.state !== filters.selectedState) return false;
+    if (filters.selectedRegion && metric.region && metric.region !== filters.selectedRegion) return false;
     return true;
   });
 
-  const handleConnectAPI = async () => {
-    if (!apiKey.trim()) return;
+  const handleSaveApiKey = () => {
+    // Persist key locally. For production, store in Supabase secrets.
+    localStorage.setItem('openai_api_key', apiKey);
+    setIsConnected(true);
+    toast.success('API key saved successfully');
+  };
+
+  const handleAnalyze = async (analysisType: 'insights' | 'escalation' | 'trends') => {
+    if (!apiKey || npsData.length === 0) {
+      toast.error(npsData.length === 0 ? 'No data available. Please upload CSV data first.' : 'Please configure your API key');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    
     try {
-      // Persist key locally (frontend-only). For production, move to Supabase secrets.
-      localStorage.setItem('openai_api_key', apiKey.trim());
-      setIsAnalyzing(true);
-      // lightweight test call via aiService fallback path happens elsewhere; here we just mark connected
-      setTimeout(() => {
-        setIsConnected(true);
-        setIsAnalyzing(false);
-      }, 600);
-    } catch {
+      // Apply filters to data
+      let filteredData = [...npsData];
+      
+      if (filters.selectedStore || filters.selectedState || filters.selectedRegion || filters.dateRange.from || filters.dateRange.to) {
+        filteredData = filteredData.filter(row => {
+          // Date filter
+          if (filters.dateRange.from || filters.dateRange.to) {
+            const date = row._normalized?.responseDate || row["Response Date"] || row.Date;
+            if (date) {
+              const itemDate = new Date(date);
+              if (filters.dateRange.from && itemDate < filters.dateRange.from) return false;
+              if (filters.dateRange.to && itemDate > filters.dateRange.to) return false;
+            }
+          }
+          
+          // Store filter
+          if (filters.selectedStore) {
+            const store = row._normalized?.storeCode || row["Store Code"] || row.Store;
+            if (store !== filters.selectedStore) return false;
+          }
+          
+          // State filter
+          if (filters.selectedState) {
+            const state = row._normalized?.state || row.State;
+            if (state !== filters.selectedState) return false;
+          }
+          
+          // Region filter
+          if (filters.selectedRegion) {
+            const region = row._normalized?.region || row.Region;
+            if (region !== filters.selectedRegion) return false;
+          }
+          
+          return true;
+        });
+      }
+
+      const aiService = new AIService(apiKey);
+      const result = await aiService.analyzeData({
+        data: filteredData.slice(0, 100), // Limit data for API constraints
+        analysisType,
+        filters
+      });
+
+      if (result.success && result.analysis) {
+        setAiInsights(result.analysis);
+        
+        // For escalation analysis, also generate metrics
+        if (analysisType === 'escalation') {
+          const metrics = await aiService.generateEscalationMetrics(filteredData.slice(0, 100), filters);
+          setEscalationMetrics(metrics);
+        }
+        
+        toast.success(`${analysisType} analysis completed`);
+      } else {
+        toast.error(result.error || 'Analysis failed');
+      }
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast.error('Failed to analyze data');
+    } finally {
       setIsAnalyzing(false);
     }
   };
@@ -140,7 +216,7 @@ export function AIInsightsPanel() {
                     </Button>
                   </div>
                   <Button 
-                    onClick={handleConnectAPI}
+                    onClick={handleSaveApiKey}
                     disabled={!apiKey.trim() || isAnalyzing}
                   >
                     {isAnalyzing ? "Connecting..." : "Connect"}

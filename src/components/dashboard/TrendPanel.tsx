@@ -1,94 +1,136 @@
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { TrendingUp, Calendar, Filter } from "lucide-react";
-
-// Mock data for demonstration
-const trendData = [
-  { month: "Jan", nps: 35, responses: 1240 },
-  { month: "Feb", nps: 38, responses: 1180 },
-  { month: "Mar", nps: 42, responses: 1320 },
-  { month: "Apr", nps: 39, responses: 1290 },
-  { month: "May", nps: 45, responses: 1380 },
-  { month: "Jun", nps: 42, responses: 1350 },
-];
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { TrendingUp } from "lucide-react";
+import { useData } from "@/contexts/DataContext";
 
 export function TrendPanel() {
-  return (
-    <Card className="bg-gradient-chart border-muted">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            NPS Trend Analysis
-          </CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            6-month rolling performance
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Calendar className="w-4 h-4 mr-2" />
-            6M
-          </Button>
-          <Button variant="outline" size="sm">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-          </Button>
-        </div>
-      </CardHeader>
+  // Use DataContext for data
+  const { filteredData, isLoading } = useData();
+
+  // Calculate daily NPS trends from filtered data
+  const chartData = useMemo(() => {
+    if (!filteredData || filteredData.length === 0 || isLoading) {
+      // Return default data for loading state
+      return [
+        { date: 'Mon', nps: 0, responses: 0 },
+        { date: 'Tue', nps: 0, responses: 0 },
+        { date: 'Wed', nps: 0, responses: 0 },
+        { date: 'Thu', nps: 0, responses: 0 },
+        { date: 'Fri', nps: 0, responses: 0 },
+        { date: 'Sat', nps: 0, responses: 0 },
+        { date: 'Sun', nps: 0, responses: 0 },
+      ];
+    }
+
+    // Group data by date
+    const dailyData = new Map<string, { scores: number[], date: Date }>();
+    
+    filteredData.forEach(record => {
+      const dateStr = record.responseDate || record['Response Date'] || record.Date;
+      if (!dateStr) return;
       
-      <CardContent>
-        {/* Chart Area - Using CSS grid for visualization */}
-        <div className="h-64 mb-4 relative">
-          <div className="absolute inset-0 grid grid-cols-6 gap-4 items-end">
-            {trendData.map((data, index) => (
-              <div key={data.month} className="flex flex-col items-center">
-                <div
-                  className="w-12 bg-gradient-to-t from-primary to-primary/60 rounded-t-md transition-all duration-500 hover:shadow-glow"
-                  style={{ height: `${(data.nps / 50) * 100}%` }}
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return;
+      
+      const dayKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      if (!dailyData.has(dayKey)) {
+        dailyData.set(dayKey, { scores: [], date });
+      }
+      
+      const score = record.npsScore || 
+                   record['NPS Score'] || 
+                   record['On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'];
+      
+      const numScore = typeof score === 'number' ? score : parseFloat(score || '0');
+      if (!isNaN(numScore)) {
+        dailyData.get(dayKey)?.scores.push(numScore);
+      }
+    });
+
+    // Calculate NPS for each day
+    const sortedDates = Array.from(dailyData.entries())
+      .sort((a, b) => a[1].date.getTime() - b[1].date.getTime())
+      .slice(-7) // Last 7 days
+      .map(([dayKey, data]) => {
+        const scores = data.scores;
+        const promoters = scores.filter(s => s >= 9).length;
+        const detractors = scores.filter(s => s <= 6).length;
+        const nps = scores.length > 0 
+          ? Math.round(((promoters - detractors) / scores.length) * 100)
+          : 0;
+        
+        return {
+          date: data.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          nps,
+          responses: scores.length
+        };
+      });
+
+    // If we have less than 7 days, fill with zeros
+    while (sortedDates.length < 7) {
+      sortedDates.unshift({
+        date: 'N/A',
+        nps: 0,
+        responses: 0
+      });
+    }
+
+    return sortedDates;
+  }, [filteredData, isLoading]);
+
+  return (
+    <Card className="bg-gradient-chart hover:shadow-xl transition-all duration-300">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-lg font-medium">NPS Trend Analysis</CardTitle>
+        <TrendingUp className="w-5 h-5 text-muted-foreground" />
+      </CardHeader>
+      <CardContent className="pt-4">
+        <div className="h-[300px]">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-muted-foreground">Loading trend data...</div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="date" 
+                  className="text-xs"
+                  tick={{ fill: 'currentColor', fontSize: 11 }}
                 />
-                <div className="mt-2 text-center">
-                  <div className="text-sm font-semibold">{data.nps}</div>
-                  <div className="text-xs text-muted-foreground">{data.month}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-nps-promoter">+7</div>
-            <div className="text-xs text-muted-foreground">6M Growth</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-primary">42</div>
-            <div className="text-xs text-muted-foreground">Current NPS</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-chart-2">38.7</div>
-            <div className="text-xs text-muted-foreground">3M Average</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-chart-3">1,350</div>
-            <div className="text-xs text-muted-foreground">Responses</div>
-          </div>
-        </div>
-
-        {/* Key Insights */}
-        <div className="mt-6 pt-4 border-t border-muted">
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="secondary" className="bg-nps-promoter/10 text-nps-promoter border-nps-promoter/20">
-              Trending Up
-            </Badge>
-            <span className="text-sm text-muted-foreground">Key Insight</span>
-          </div>
-          <p className="text-sm">
-            NPS has improved by <strong>+7 points</strong> over the last 6 months, 
-            with the strongest growth in Q2. May showed the highest score of +45.
-          </p>
+                <YAxis 
+                  className="text-xs"
+                  tick={{ fill: 'currentColor', fontSize: 11 }}
+                  domain={[-100, 100]}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))'
+                  }}
+                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="nps" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="responses" 
+                  stroke="hsl(var(--muted-foreground))" 
+                  strokeWidth={1}
+                  strokeDasharray="5 5"
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </CardContent>
     </Card>

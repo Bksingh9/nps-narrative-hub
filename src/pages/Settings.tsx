@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HeaderBar } from "@/components/layout/HeaderBar";
 import { SideNav } from "@/components/layout/SideNav";
+import authService from "@/services/authService";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,21 +19,44 @@ import {
   Database, 
   Mail, 
   Globe, 
-  RefreshCw, 
   Zap, 
   Key, 
   Wifi,
   Clock,
-  TestTube
+  TestTube,
+  Sparkles,
+  TrendingUp,
+  FileText,
+  AlertTriangle,
+  BarChart,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { useRealTime } from "@/contexts/RealTimeContext";
 import { toast } from "sonner";
 
 export default function Settings() {
-  const [userRole] = useState<"admin" | "user" | "store_manager">("admin");
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+  const [userRole] = useState<"admin" | "user" | "store_manager">(currentUser?.role || "user");
+  
+  // Redirect non-admin users
+  useEffect(() => {
+    if (currentUser?.role !== 'admin') {
+      toast.error('Access denied. Only administrators can access settings.');
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [autoReports, setAutoReports] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [lastAIGeneration, setLastAIGeneration] = useState<string | null>(() => 
+    localStorage.getItem('last_ai_generation')
+  );
+  const [autoGenerateAI, setAutoGenerateAI] = useState(false);
+  const [openaiApiKey, setOpenaiApiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
+  const [showApiKey, setShowApiKey] = useState(false);
   
   const { 
     config, 
@@ -42,8 +67,22 @@ export default function Settings() {
     refreshData 
   } = useRealTime();
 
-  const [localApiKey, setLocalApiKey] = useState<string>(localStorage.getItem('openai_api_key') || config.apiKey);
+  // Initialize with the provided API key
+  const [localApiKey, setLocalApiKey] = useState<string>(() => {
+    const savedKey = localStorage.getItem('openai_api_key');
+    // Use the provided key if no key is saved
+    return savedKey || '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';
+  });
   const [localApiEndpoint, setLocalApiEndpoint] = useState(config.apiEndpoint);
+
+  // Auto-save the API key on component mount if not already saved
+  useEffect(() => {
+    if (!localStorage.getItem('openai_api_key') && localApiKey) {
+      localStorage.setItem('openai_api_key', localApiKey);
+      updateConfig({ apiKey: localApiKey });
+      toast.success('API key configured successfully');
+    }
+  }, []); // Run only once on mount
 
   const handleLogout = () => {
     console.log("Logout clicked");
@@ -65,6 +104,76 @@ export default function Settings() {
       apiEndpoint: localApiEndpoint
     });
     await testConnection();
+  };
+
+  const handleGenerateAI = async (type: 'insights' | 'actionPlan' | 'anomalies' | 'benchmark') => {
+    setIsGenerating(true);
+    try {
+      // Get NPS data from localStorage
+      const npsData = JSON.parse(localStorage.getItem('nps-records') || '[]');
+      
+      if (npsData.length === 0) {
+        toast.error('No data available. Please upload CSV data first.');
+        return;
+      }
+
+      // Prepare data for AI analysis
+      const dataSlice = npsData.slice(0, 100); // Limit to 100 records for API constraints
+      
+      // Import AIService
+      const { AIService } = await import('@/lib/aiService');
+      const aiService = new AIService(localApiKey);
+      
+      let result;
+      switch (type) {
+        case 'insights':
+          result = await aiService.analyzeData({ 
+            data: dataSlice, 
+            analysisType: 'insights' 
+          });
+          localStorage.setItem('ai_insights', JSON.stringify(result));
+          toast.success('Insights generated successfully!');
+          break;
+        case 'actionPlan':
+          result = await aiService.analyzeData({ 
+            data: dataSlice, 
+            analysisType: 'escalation' 
+          });
+          localStorage.setItem('ai_action_plan', JSON.stringify(result));
+          toast.success('Action plan generated successfully!');
+          break;
+        case 'anomalies':
+          // Detect anomalies using data analysis
+          const { detectAnomalies } = await import('@/lib/data');
+          const anomalies = detectAnomalies(npsData);
+          localStorage.setItem('ai_anomalies', JSON.stringify(anomalies));
+          toast.success(`Detected ${anomalies.length} anomalies!`);
+          break;
+        case 'benchmark':
+          // Detect benchmark drops
+          const { detectBenchmarkDrops } = await import('@/lib/data');
+          const benchmarks = detectBenchmarkDrops(npsData);
+          localStorage.setItem('ai_benchmarks', JSON.stringify(benchmarks));
+          toast.success('Benchmark analysis completed!');
+          break;
+      }
+      
+      // Update last generation timestamp
+      const timestamp = new Date().toISOString();
+      setLastAIGeneration(timestamp);
+      localStorage.setItem('last_ai_generation', timestamp);
+      
+      // Dispatch event to notify other components
+      window.dispatchEvent(new CustomEvent('nps-ai-updated', { 
+        detail: { type, timestamp } 
+      }));
+      
+    } catch (error) {
+      console.error('AI generation error:', error);
+      toast.error(`Failed to generate ${type}. Please check your API key.`);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const getConnectionStatusBadge = () => {
@@ -97,81 +206,10 @@ export default function Settings() {
             </div>
             <div className="flex items-center gap-2">
               {getConnectionStatusBadge()}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={refreshData}
-                disabled={isRefreshing}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Real-Time Data Settings */}
-            <Card className="bg-gradient-chart border-muted">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-yellow-500" />
-                  Real-Time Updates
-                  <Badge variant="outline" className="ml-auto">Looker Studio Style</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="auto-refresh">Auto-Refresh Data</Label>
-                    <p className="text-sm text-muted-foreground">Automatically update data like Looker Studio</p>
-                  </div>
-                  <Switch 
-                    id="auto-refresh"
-                    checked={config.autoRefreshEnabled}
-                    onCheckedChange={toggleAutoRefresh}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="space-y-2">
-                  <Label htmlFor="refresh-interval">Refresh Interval</Label>
-                  <Select 
-                    value={config.refreshInterval.toString()} 
-                    onValueChange={(value) => updateConfig({ refreshInterval: parseInt(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="15">15 seconds</SelectItem>
-                      <SelectItem value="30">30 seconds</SelectItem>
-                      <SelectItem value="60">1 minute</SelectItem>
-                      <SelectItem value="300">5 minutes</SelectItem>
-                      <SelectItem value="900">15 minutes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {config.lastUpdated && `Last updated: ${config.lastUpdated.toLocaleTimeString()}`}
-                  </p>
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="websocket">WebSocket Connection</Label>
-                    <p className="text-sm text-muted-foreground">Enable real-time push updates</p>
-                  </div>
-                  <Switch 
-                    id="websocket"
-                    checked={config.websocketEnabled}
-                    onCheckedChange={(checked) => updateConfig({ websocketEnabled: checked })}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
             {/* API Integration Settings */}
             <Card className="bg-gradient-chart border-muted">
               <CardHeader>
@@ -225,6 +263,178 @@ export default function Settings() {
                     <Key className="w-4 h-4 mr-2" />
                     Save Config
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* OpenAI API Configuration */}
+            <Card className="bg-gradient-chart border-muted">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Key className="w-5 h-5 text-green-500" />
+                  OpenAI API Configuration
+                  <Badge variant={openaiApiKey ? "default" : "destructive"} className="ml-auto">
+                    {openaiApiKey ? "Connected" : "Not Connected"}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="openai-key">OpenAI API Key</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        id="openai-key"
+                        type={showApiKey ? "text" : "password"}
+                        value={openaiApiKey}
+                        onChange={(e) => setOpenaiApiKey(e.target.value)}
+                        placeholder="sk-..."
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-1 h-7 w-7"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                      >
+                        {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        localStorage.setItem('openai_api_key', openaiApiKey);
+                        toast.success('API key saved successfully');
+                      }}
+                      disabled={!openaiApiKey}
+                    >
+                      Save Key
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enter your OpenAI API key to enable AI-powered insights and chatbot features.
+                    Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" className="text-primary hover:underline">OpenAI Platform</a>
+                  </p>
+                </div>
+                
+                {openaiApiKey && (
+                  <div className="space-y-2">
+                    <Label htmlFor="model-selection">AI Model</Label>
+                    <Select 
+                      value={localStorage.getItem('ai_model') || 'gpt-3.5-turbo'}
+                      onValueChange={(value) => {
+                        localStorage.setItem('ai_model', value);
+                        toast.success('Model preference saved');
+                      }}
+                    >
+                      <SelectTrigger id="model-selection">
+                        <SelectValue placeholder="Select AI Model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo (Fast & Economical)</SelectItem>
+                        <SelectItem value="gpt-4">GPT-4 (Most Capable)</SelectItem>
+                        <SelectItem value="gpt-4-turbo-preview">GPT-4 Turbo (Latest)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="auto-insights">Auto-Generate Insights</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Automatically generate AI insights when data changes
+                    </p>
+                  </div>
+                  <Switch
+                    id="auto-insights"
+                    checked={autoGenerateAI}
+                    onCheckedChange={(checked) => {
+                      setAutoGenerateAI(checked);
+                      localStorage.setItem('auto_generate_ai', checked.toString());
+                      toast.success(checked ? 'Auto-insights enabled' : 'Auto-insights disabled');
+                    }}
+                    disabled={!openaiApiKey}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Actions */}
+            <Card className="bg-gradient-chart border-muted">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-500" />
+                  AI Intelligence Actions
+                  <Badge variant="outline" className="ml-auto">Powered by OpenAI</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Generate AI-powered insights from your NPS data
+                </p>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center justify-center"
+                    onClick={() => handleGenerateAI('insights')}
+                    disabled={!localApiKey || isGenerating}
+                  >
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Generate Insights
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center justify-center"
+                    onClick={() => handleGenerateAI('actionPlan')}
+                    disabled={!localApiKey || isGenerating}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Action Plans
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center justify-center"
+                    onClick={() => handleGenerateAI('anomalies')}
+                    disabled={!localApiKey || isGenerating}
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Detect Anomalies
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center justify-center"
+                    onClick={() => handleGenerateAI('benchmark')}
+                    disabled={!localApiKey || isGenerating}
+                  >
+                    <BarChart className="w-4 h-4 mr-2" />
+                    Benchmark Analysis
+                  </Button>
+                </div>
+                
+                {lastAIGeneration && (
+                  <div className="mt-4 p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground">
+                      Last generated: {new Date(lastAIGeneration).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+                
+                <Separator />
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Auto-generate on data changes</Label>
+                    <p className="text-sm text-muted-foreground">Automatically run AI analysis when data updates</p>
+                  </div>
+                  <Switch 
+                    checked={autoGenerateAI}
+                    onCheckedChange={setAutoGenerateAI}
+                  />
                 </div>
               </CardContent>
             </Card>

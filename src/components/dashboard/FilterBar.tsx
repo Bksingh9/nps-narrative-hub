@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,36 +9,62 @@ import { format } from "date-fns";
 import { CalendarIcon, RotateCcw, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFilters } from "@/contexts/FilterContext";
-
-const stores = [
-  { value: "all", label: "All Stores" },
-  { value: "store-001", label: "Downtown Mumbai" },
-  { value: "store-002", label: "Central Delhi" },
-  { value: "store-003", label: "Tech Park Bangalore" },
-  { value: "store-004", label: "Marina Chennai" },
-  { value: "store-005", label: "City Center Pune" }
-];
-
-const states = [
-  { value: "all", label: "All States" },
-  { value: "maharashtra", label: "Maharashtra" },
-  { value: "delhi", label: "Delhi" },
-  { value: "karnataka", label: "Karnataka" },
-  { value: "tamil-nadu", label: "Tamil Nadu" },
-  { value: "west-bengal", label: "West Bengal" }
-];
-
-const regions = [
-  { value: "all", label: "All Regions" },
-  { value: "north", label: "North India" },
-  { value: "south", label: "South India" },
-  { value: "east", label: "East India" },
-  { value: "west", label: "West India" },
-  { value: "central", label: "Central India" }
-];
+import { safeGetRecords, onNpsDataUpdated, extractStore, extractState, extractRegion, extractCity } from "@/lib/data";
 
 export function FilterBar() {
-  const { filters, updateDateRange, updateStore, updateState, updateRegion, resetFilters } = useFilters();
+  const { filters, updateDateRange, updateStore, updateState, updateRegion, updateCity, resetFilters } = useFilters();
+  const [version, setVersion] = useState(0);
+  
+  // Listen for data updates
+  useEffect(() => {
+    const off = onNpsDataUpdated(() => setVersion(v => v + 1));
+    return off;
+  }, []);
+  
+  // Dynamically extract unique values from actual data
+  const { stores, states, regions, cities } = useMemo(() => {
+    const records = safeGetRecords();
+    const storeSet = new Set<string>();
+    const stateSet = new Set<string>();
+    const regionSet = new Set<string>();
+    const citySet = new Set<string>();
+    
+    for (const record of records) {
+      const store = extractStore(record);
+      const state = extractState(record);
+      const region = extractRegion(record);
+      const city = extractCity(record);
+      
+      if (store) storeSet.add(String(store));
+      if (state) stateSet.add(String(state));
+      if (region) regionSet.add(String(region));
+      if (city) citySet.add(String(city));
+    }
+    
+    // Convert to arrays and sort
+    const stores = [
+      { value: "all", label: "All Stores" },
+      ...Array.from(storeSet).sort().map(s => ({ value: s, label: s }))
+    ];
+    
+    const states = [
+      { value: "all", label: "All States" },
+      ...Array.from(stateSet).sort().map(s => ({ value: s, label: s }))
+    ];
+    
+    const regions = [
+      { value: "all", label: "All Regions" },
+      ...Array.from(regionSet).sort().map(s => ({ value: s, label: s }))
+    ];
+    
+    const cities = [
+      { value: "all", label: "All Cities" },
+      ...Array.from(citySet).sort().map(s => ({ value: s, label: s }))
+    ];
+    
+    return { stores, states, regions, cities };
+  }, [version]);
+
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(
     filters.dateRange.from && filters.dateRange.to 
       ? { from: filters.dateRange.from, to: filters.dateRange.to }
@@ -57,7 +83,8 @@ export function FilterBar() {
     filters.dateRange.from || 
     filters.selectedStore !== '' || 
     filters.selectedState !== '' || 
-    filters.selectedRegion !== '';
+    filters.selectedRegion !== '' ||
+    filters.selectedCity !== '';
 
   return (
     <Card className="mb-6">
@@ -108,7 +135,7 @@ export function FilterBar() {
           {/* Store Filter */}
           <Select value={filters.selectedStore || "all"} onValueChange={(value) => updateStore(value === "all" ? "" : value)}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select store" />
+              <SelectValue placeholder="All Stores" />
             </SelectTrigger>
             <SelectContent>
               {stores.map((store) => (
@@ -122,7 +149,7 @@ export function FilterBar() {
           {/* State Filter */}
           <Select value={filters.selectedState || "all"} onValueChange={(value) => updateState(value === "all" ? "" : value)}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Select state" />
+              <SelectValue placeholder="All States" />
             </SelectTrigger>
             <SelectContent>
               {states.map((state) => (
@@ -136,7 +163,7 @@ export function FilterBar() {
           {/* Region Filter */}
           <Select value={filters.selectedRegion || "all"} onValueChange={(value) => updateRegion(value === "all" ? "" : value)}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Select region" />
+              <SelectValue placeholder="All Regions" />
             </SelectTrigger>
             <SelectContent>
               {regions.map((region) => (
@@ -146,6 +173,22 @@ export function FilterBar() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* City Filter - New addition */}
+          {cities.length > 1 && (
+            <Select value={filters.selectedCity || "all"} onValueChange={(value) => updateCity(value === "all" ? "" : value)}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Cities" />
+              </SelectTrigger>
+              <SelectContent>
+                {cities.map((city) => (
+                  <SelectItem key={city.value} value={city.value}>
+                    {city.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Reset Filters */}
           {hasActiveFilters && (
