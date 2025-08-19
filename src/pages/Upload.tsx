@@ -8,10 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Separator } from '@/components/ui/separator';
 import { 
   Upload as UploadIcon, 
   FileText, 
@@ -19,21 +15,17 @@ import {
   CheckCircle, 
   Download,
   Loader2,
-  Filter,
-  Calendar as CalendarIcon,
-  RefreshCw,
+  Save,
   Trash2,
   TrendingUp,
-  Users,
-  Store
+  Users
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import csvDataService, { FilterOptions, FilterOptionsResponse } from '@/services/csvDataService';
 import authService from '@/services/authService';
 import { useNavigate } from 'react-router-dom';
-import DataExportButton from '@/components/DataExportButton';
 import { toast } from 'sonner';
+import Papa from 'papaparse';
+import { safeGetRecords, setRecords, computeNps, extractDate, extractScore, extractStore, extractState, extractRegion } from '@/lib/data';
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -47,57 +39,42 @@ export default function Upload() {
       navigate('/');
     }
   }, [currentUser, navigate]);
+  
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isFiltering, setIsFiltering] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [uploadMessage, setUploadMessage] = useState('');
   
-  // Data state
-  const [currentData, setCurrentData] = useState<any[]>([]);
-  const [metadata, setMetadata] = useState<any>(null);
-  const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
-  
-  // Filter state
-  const [filters, setFilters] = useState<FilterOptions>({});
-  const [dateFrom, setDateFrom] = useState<Date>();
-  const [dateTo, setDateTo] = useState<Date>();
-  
-  // Aggregates
+  // Data state  
+  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [savedRecords, setSavedRecords] = useState<any[]>([]);
   const [aggregates, setAggregates] = useState<any>(null);
 
-  // Load initial state on mount
+  // Load saved records on mount
   useEffect(() => {
-    loadInitialState();
+    const saved = safeGetRecords();
+    setSavedRecords(saved);
+    if (saved.length > 0) {
+      const agg = computeNps(saved);
+      setAggregates({
+        npsScore: agg.nps,
+        totalResponses: agg.total,
+        promoters: saved.filter(r => extractScore(r) >= 9).length,
+        detractors: saved.filter(r => extractScore(r) <= 6).length
+      });
+    }
   }, []);
 
-  // Apply filters when they change
-  useEffect(() => {
-    if (metadata) {
-      applyFilters();
-    }
-  }, [filters, dateFrom, dateTo]);
-
-  const loadInitialState = async () => {
-    try {
-      // Check if there's data on the server
-      const currentState = await csvDataService.getCurrentDataState();
-      
-      if (currentState.hasData) {
-        setMetadata(currentState.metadata);
-        
-        // Load filter options
-        const options = await csvDataService.getFilterOptions();
-        setFilterOptions(options);
-        
-        // Load initial data
-        await applyFilters();
-        
-        toast.success('Previous data session restored');
-      }
-    } catch (error) {
-      console.error('Error loading initial state:', error);
-    }
+  // Normalize row function
+  const normalizeRow = (row: any) => {
+    return {
+      responseDate: extractDate(row),
+      nps: extractScore(row),
+      storeCode: extractStore(row),
+      state: extractState(row),
+      region: extractRegion(row),
+      comments: row["Comments"] || row["Feedback"] || row["Remark"] || row["Observation"] || ""
+    };
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,71 +101,87 @@ export default function Upload() {
     setUploadMessage('Processing CSV file...');
 
     try {
-      const result = await csvDataService.uploadCSV(selectedFile);
-      
-      if (result.success) {
-        setMetadata(result.metadata);
-        setUploadStatus('success');
-        setUploadMessage(`Successfully processed ${result.totalRecords} records`);
-        
-        // Load filter options
-        const options = await csvDataService.getFilterOptions();
-        setFilterOptions(options);
-        
-        // Reset filters and load all data
-        setFilters({});
-        setDateFrom(undefined);
-        setDateTo(undefined);
-        await applyFilters();
-        
-        toast.success('CSV uploaded and processed successfully');
-      } else {
-        throw new Error(result.error || 'Upload failed');
-      }
+      Papa.parse(selectedFile, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true,
+        transformHeader: (h: string) => h.trim(),
+        complete: (results: Papa.ParseResult<any>) => {
+          try {
+            const rows = results.data;
+            const processed = rows.map(row => {
+              row._normalized = normalizeRow(row);
+              return row;
+            });
+
+            // Deduplicate by JSON.stringify
+            const existing = safeGetRecords();
+            const existingSet = new Set(existing.map(r => JSON.stringify(r)));
+            const newRows = processed.filter(r => !existingSet.has(JSON.stringify(r)));
+
+            setParsedData(processed);
+            setUploadStatus('success');
+            setUploadMessage(`Successfully parsed ${processed.length} records (${newRows.length} new)`);
+            
+            const agg = computeNps(processed);
+            setAggregates({
+              npsScore: agg.nps,
+              totalResponses: agg.total,
+              promoters: processed.filter(r => extractScore(r) >= 9).length,
+              detractors: processed.filter(r => extractScore(r) <= 6).length
+            });
+
+            toast.success('CSV processed successfully');
+          } catch (error: any) {
+            setUploadStatus('error');
+            setUploadMessage('Failed to process CSV data');
+            toast.error(error.message || 'Processing failed');
+          } finally {
+            setIsUploading(false);
+          }
+        },
+        error: (error: any) => {
+          setUploadStatus('error');
+          setUploadMessage(error.message || 'Failed to parse CSV');
+          toast.error('Failed to parse CSV file');
+          setIsUploading(false);
+        }
+      });
     } catch (error: any) {
       setUploadStatus('error');
       setUploadMessage(error.message || 'Failed to upload file');
       toast.error(error.message || 'Upload failed');
-    } finally {
       setIsUploading(false);
     }
   };
 
-  const applyFilters = async () => {
-    setIsFiltering(true);
+  const handleSaveData = () => {
+    if (parsedData.length === 0) {
+      toast.error('No data to save');
+      return;
+    }
     
     try {
-      const filterParams: FilterOptions = {
-        ...filters,
-        dateFrom: dateFrom?.toISOString(),
-        dateTo: dateTo?.toISOString(),
-      };
+      const existing = safeGetRecords();
+      const existingSet = new Set(existing.map(r => JSON.stringify(r)));
+      const newRows = parsedData.filter(r => !existingSet.has(JSON.stringify(r)));
+      const merged = [...existing, ...newRows];
       
-      const result = await csvDataService.filterData(filterParams);
-      
-      if (result.success) {
-        setCurrentData(result.data);
-        setAggregates(result.aggregates);
-      }
+      setRecords(merged);
+      setSavedRecords(merged);
+      toast.success(`Saved dataset: ${merged.length} records (${newRows.length} new)`);
     } catch (error: any) {
-      toast.error('Failed to apply filters');
-      console.error('Filter error:', error);
-    } finally {
-      setIsFiltering(false);
+      toast.error('Failed to save data');
     }
   };
 
-  const handleClearData = async () => {
+  const handleClearData = () => {
     if (confirm('Are you sure you want to clear all data?')) {
       try {
-        await csvDataService.clearData();
-        setCurrentData([]);
-        setMetadata(null);
-        setFilterOptions(null);
+        setRecords([]);
+        setParsedData([]);
+        setSavedRecords([]);
         setAggregates(null);
-        setFilters({});
-        setDateFrom(undefined);
-        setDateTo(undefined);
         toast.success('Data cleared successfully');
       } catch (error) {
         toast.error('Failed to clear data');
@@ -197,12 +190,20 @@ export default function Upload() {
   };
 
   const handleExport = () => {
-    if (currentData.length === 0) {
+    const dataToExport = savedRecords.length > 0 ? savedRecords : parsedData;
+    if (dataToExport.length === 0) {
       toast.error('No data to export');
       return;
     }
     
-    csvDataService.exportToCSV(currentData);
+    const csvContent = Papa.unparse(dataToExport);
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nps-data-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
     toast.success('Data exported successfully');
   };
 
@@ -212,7 +213,7 @@ export default function Upload() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-        <SideNav userRole={userRole} />
+      <SideNav userRole={userRole} />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <HeaderBar 
@@ -224,11 +225,11 @@ export default function Upload() {
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex justify-between items-center">
-          <div>
+              <div>
                 <h1 className="text-3xl font-bold text-gray-900">Real-Time CSV Data Processing</h1>
                 <p className="text-gray-600 mt-1">Upload and analyze NPS data with dynamic filtering</p>
               </div>
-              {metadata && (
+              {(savedRecords.length > 0 || parsedData.length > 0) && (
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={handleExport}>
                     <Download className="w-4 h-4 mr-2" />
@@ -296,7 +297,7 @@ export default function Upload() {
                         {aggregates.totalResponses > 0 
                           ? `${Math.round((aggregates.detractors / aggregates.totalResponses) * 100)}%`
                           : '0%'}
-                            </Badge>
+                      </Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -306,8 +307,7 @@ export default function Upload() {
             <Tabs defaultValue="upload" className="space-y-4">
               <TabsList>
                 <TabsTrigger value="upload">Upload CSV</TabsTrigger>
-                <TabsTrigger value="filters" disabled={!metadata}>Filters</TabsTrigger>
-                <TabsTrigger value="data" disabled={!currentData.length}>Data Preview</TabsTrigger>
+                <TabsTrigger value="data" disabled={parsedData.length === 0}>Data Preview</TabsTrigger>
               </TabsList>
 
               {/* Upload Tab */}
@@ -360,43 +360,52 @@ export default function Upload() {
                       </Alert>
                     )}
 
-                    <Button 
-                      onClick={handleUpload} 
-                      disabled={!selectedFile || isUploading}
-                      className="w-full"
-                    >
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <UploadIcon className="mr-2 h-4 w-4" />
-                          Upload and Process
-                        </>
+                    <div className="space-y-2">
+                      <Button 
+                        onClick={handleUpload} 
+                        disabled={!selectedFile || isUploading}
+                        className="w-full"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <UploadIcon className="mr-2 h-4 w-4" />
+                            Upload and Process
+                          </>
+                        )}
+                      </Button>
+                      
+                      {parsedData.length > 0 && (
+                        <Button 
+                          onClick={handleSaveData}
+                          variant="outline"
+                          className="w-full"
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Data ({parsedData.length} records)
+                        </Button>
                       )}
-                    </Button>
+                    </div>
 
-                    {metadata && (
+                    {parsedData.length > 0 && (
                       <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                         <h4 className="font-medium mb-2">Upload Summary</h4>
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Total Records:</span>
-                            <span className="font-medium">{metadata.totalRecords}</span>
+                            <span className="text-gray-600">Parsed Records:</span>
+                            <span className="font-medium">{parsedData.length}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Date Range:</span>
-                            <span className="font-medium">
-                              {metadata.dateRange?.from && metadata.dateRange?.to
-                                ? `${format(new Date(metadata.dateRange.from), 'MMM d, yyyy')} - ${format(new Date(metadata.dateRange.to), 'MMM d, yyyy')}`
-                                : 'N/A'}
-                            </span>
+                            <span className="text-gray-600">Saved Records:</span>
+                            <span className="font-medium">{savedRecords.length}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Average NPS:</span>
-                            <span className="font-medium">{metadata.aggregates?.averageNPS?.toFixed(1) || 'N/A'}</span>
+                            <span className="text-gray-600">NPS Score:</span>
+                            <span className="font-medium">{aggregates?.npsScore || 'N/A'}</span>
                           </div>
                         </div>
                       </div>
@@ -405,241 +414,63 @@ export default function Upload() {
                 </Card>
               </TabsContent>
 
-              {/* Filters Tab */}
-              <TabsContent value="filters">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Real-Time Filters</CardTitle>
-                    <CardDescription>
-                      Apply filters to analyze specific segments of your data
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Date Range Filter */}
-                      <div className="space-y-2">
-                        <Label>Date From</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !dateFrom && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dateFrom ? format(dateFrom, "PPP") : "Select date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={dateFrom}
-                              onSelect={setDateFrom}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Date To</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !dateTo && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {dateTo ? format(dateTo, "PPP") : "Select date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={dateTo}
-                              onSelect={setDateTo}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      {/* State Filter */}
-                      <div className="space-y-2">
-                        <Label>State</Label>
-                        <Select 
-                          value={filters.state || 'all'} 
-                          onValueChange={(value) => setFilters({...filters, state: value === 'all' ? undefined : value})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="All States" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All States</SelectItem>
-                            {filterOptions?.states.map(state => (
-                              <SelectItem key={state} value={state}>{state}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Store Code Filter */}
-                      <div className="space-y-2">
-                        <Label>Store Code</Label>
-                        <Select 
-                          value={filters.storeCode || 'all'} 
-                          onValueChange={(value) => setFilters({...filters, storeCode: value === 'all' ? undefined : value})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="All Stores" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Stores</SelectItem>
-                            {filterOptions?.stores.map(store => (
-                              <SelectItem key={(store as any).code || store as any} value={(store as any).code || (store as any)}>
-                                {(store as any).code ? `${(store as any).code} - ${(store as any).name}` : (store as any)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Region Filter */}
-                      <div className="space-y-2">
-                        <Label>Region</Label>
-                        <Select 
-                          value={filters.region || 'all'} 
-                          onValueChange={(value) => setFilters({...filters, region: value === 'all' ? undefined : value})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="All Regions" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Regions</SelectItem>
-                            {filterOptions?.regions.map(region => (
-                              <SelectItem key={region} value={region}>{region}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* NPS Category Filter */}
-                      <div className="space-y-2">
-                        <Label>NPS Category</Label>
-                        <Select 
-                          value={filters.npsCategory || 'all'} 
-                          onValueChange={(value) => setFilters({...filters, npsCategory: value === 'all' ? undefined : value as any})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="All Categories" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Categories</SelectItem>
-                            <SelectItem value="Promoter">Promoters (9-10)</SelectItem>
-                            <SelectItem value="Passive">Passives (7-8)</SelectItem>
-                            <SelectItem value="Detractor">Detractors (0-6)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                  </div>
-                </div>
-                
-                    <Separator />
-
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-gray-600">
-                        Showing {currentData.length} of {metadata?.totalRecords || 0} records
-                      </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                          onClick={() => {
-                            setFilters({});
-                            setDateFrom(undefined);
-                            setDateTo(undefined);
-                          }}
-                        >
-                          Clear Filters
-                  </Button>
-                        <Button onClick={applyFilters} disabled={isFiltering}>
-                          {isFiltering ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Applying...
-                            </>
-                          ) : (
-                            <>
-                              <Filter className="mr-2 h-4 w-4" />
-                              Apply Filters
-                            </>
-                          )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-              </TabsContent>
-
               {/* Data Preview Tab */}
               <TabsContent value="data">
                 <Card>
-            <CardHeader>
+                  <CardHeader>
                     <CardTitle>Data Preview</CardTitle>
                     <CardDescription>
-                      Showing filtered NPS data records
+                      Preview of processed CSV data
                     </CardDescription>
-            </CardHeader>
-            <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Store Code</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Store Name</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">State</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">NPS Score</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Response Date</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {currentData.slice(0, 10).map((record, index) => (
-                            <tr key={record.id || index}>
-                              <td className="px-4 py-2 text-sm">{record.storeCode}</td>
-                              <td className="px-4 py-2 text-sm">{record.storeName}</td>
-                              <td className="px-4 py-2 text-sm">{record.state}</td>
-                              <td className="px-4 py-2 text-sm">{record.region}</td>
-                              <td className="px-4 py-2 text-sm">
-                                <Badge variant={
-                                  record.npsCategory === 'Promoter' ? 'default' :
-                                  record.npsCategory === 'Passive' ? 'secondary' : 'destructive'
-                                }>
-                                  {record.npsScore}
-                                </Badge>
-                              </td>
-                              <td className="px-4 py-2 text-sm">
-                                <Badge variant="outline">{record.npsCategory}</Badge>
-                              </td>
-                              <td className="px-4 py-2 text-sm">
-                                {record.responseDate ? format(new Date(record.responseDate), 'MMM d, yyyy') : 'N/A'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {currentData.length > 10 && (
-                        <div className="mt-4 text-center text-sm text-gray-500">
-                          Showing 10 of {currentData.length} records
+                  </CardHeader>
+                  <CardContent>
+                    {parsedData.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="text-sm text-gray-600">
+                          Showing first 10 records of {parsedData.length} total
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse border border-gray-200">
+                            <thead>
+                              <tr className="bg-gray-50">
+                                <th className="border border-gray-200 p-2 text-left">Date</th>
+                                <th className="border border-gray-200 p-2 text-left">Store</th>
+                                <th className="border border-gray-200 p-2 text-left">State</th>
+                                <th className="border border-gray-200 p-2 text-left">NPS</th>
+                                <th className="border border-gray-200 p-2 text-left">Comments</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {parsedData.slice(0, 10).map((row, idx) => (
+                                <tr key={idx}>
+                                  <td className="border border-gray-200 p-2">
+                                    {extractDate(row) || 'N/A'}
+                                  </td>
+                                  <td className="border border-gray-200 p-2">
+                                    {extractStore(row) || 'N/A'}
+                                  </td>
+                                  <td className="border border-gray-200 p-2">
+                                    {extractState(row) || 'N/A'}
+                                  </td>
+                                  <td className="border border-gray-200 p-2">
+                                    {extractScore(row) ?? 'N/A'}
+                                  </td>
+                                  <td className="border border-gray-200 p-2 max-w-xs truncate">
+                                    {row["Comments"] || row["Feedback"] || 'N/A'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                      )}
-              </div>
-            </CardContent>
-          </Card>
+                    ) : (
+                      <div className="text-center text-gray-500 py-8">
+                        No data to preview. Upload a CSV file first.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
             </Tabs>
           </div>

@@ -1,7 +1,7 @@
 import Dashboard from "./Dashboard";
 
 const Index = () => {
-  return <Dashboard userRole="admin" />;
+  return <Dashboard />;
 };
 
 export default Index;
