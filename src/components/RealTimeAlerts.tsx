@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import openaiService from '@/services/openaiService';
 import { toast } from 'sonner';
+import { useData } from '@/contexts/DataContext';
 
 interface Alert {
   id: string;
@@ -36,26 +37,25 @@ export function RealTimeAlerts({ compact = false, maxAlerts = 5 }: RealTimeAlert
     new Set(JSON.parse(localStorage.getItem('dismissed_alerts') || '[]'))
   );
   const [isGenerating, setIsGenerating] = useState(false);
+  const { filteredData } = useData();
 
   useEffect(() => {
-    generateAlerts();
-    const interval = setInterval(generateAlerts, 60000); // Check every minute
-    
-    // Listen for data updates
-    const handleDataUpdate = () => generateAlerts();
+    generateAlerts(filteredData);
+    // Also regenerate when data is updated elsewhere
+    const handleDataUpdate = () => generateAlerts(filteredData);
     window.addEventListener('nps-data-updated', handleDataUpdate);
-    
+    window.addEventListener('filters-applied' as any, handleDataUpdate as any);
     return () => {
-      clearInterval(interval);
       window.removeEventListener('nps-data-updated', handleDataUpdate);
+      window.removeEventListener('filters-applied' as any, handleDataUpdate as any);
     };
-  }, []);
+  }, [filteredData]);
 
-  const generateAlerts = async () => {
+  const generateAlerts = async (sourceData: any[]) => {
     setIsGenerating(true);
-    const data = JSON.parse(localStorage.getItem('nps-records') || '[]');
+    const data = Array.isArray(sourceData) ? sourceData : [];
     
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
       setAlerts([]);
       setIsGenerating(false);
       return;
@@ -138,7 +138,7 @@ export function RealTimeAlerts({ compact = false, maxAlerts = 5 }: RealTimeAlert
       });
     }
 
-    // Check for recent decline (mock for now, would need historical data)
+    // Check for recent decline based on last 7 days within filtered set
     const recentData = data.filter((d: any) => {
       const date = new Date(d.responseDate || d['Response Date']);
       const daysDiff = (new Date().getTime() - date.getTime()) / (1000 * 3600 * 24);
@@ -171,7 +171,7 @@ export function RealTimeAlerts({ compact = false, maxAlerts = 5 }: RealTimeAlert
 
     // Low response rate alert
     const uniqueStores = [...new Set(data.map((d: any) => d.storeCode || d['Store Code']))].length;
-    const avgResponsesPerStore = data.length / uniqueStores;
+    const avgResponsesPerStore = data.length / Math.max(uniqueStores, 1);
     if (avgResponsesPerStore < 5) {
       newAlerts.push({
         id: 'low-responses',
@@ -183,7 +183,7 @@ export function RealTimeAlerts({ compact = false, maxAlerts = 5 }: RealTimeAlert
       });
     }
 
-    // Get AI-generated alerts if API key is available
+    // Optional: AI-generated alerts (best effort)
     try {
       const aiAlerts = await openaiService.generateRealTimeAlerts({
         npsScore,
@@ -208,7 +208,7 @@ export function RealTimeAlerts({ compact = false, maxAlerts = 5 }: RealTimeAlert
         });
       });
     } catch (error) {
-      console.error('Error generating AI alerts:', error);
+      // ignore AI failures
     }
 
     // Filter out dismissed alerts
@@ -221,7 +221,7 @@ export function RealTimeAlerts({ compact = false, maxAlerts = 5 }: RealTimeAlert
     const scores = records.map(r => {
       const score = r.npsScore || r['NPS Score'] || 
         r['On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'];
-      return typeof score === 'number' ? score : parseInt(score || '0');
+    return typeof score === 'number' ? score : parseInt(score || '0');
     }).filter(s => !isNaN(s));
     
     if (scores.length === 0) return 0;

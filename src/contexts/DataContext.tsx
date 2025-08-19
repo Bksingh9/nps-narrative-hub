@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
-import Papa from 'papaparse';
 
 interface NPSRecord {
   [key: string]: any;
@@ -135,21 +134,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             console.error('DataContext: Error parsing localStorage data:', parseError);
           }
           if (!loadedLocal) {
-            // If neither backend nor localStorage provided data, try sample CSVs
-            const sampleLoaded = await loadFromSampleCSV();
-            if (!sampleLoaded) {
-              console.warn('DataContext: No data available from backend, localStorage, or samples');
-            } else {
-              const unique = (arr: any[]) => Array.from(new Set(arr.filter(Boolean))).sort();
-              setFilterOptions({
-                states: unique(rawData.map((d: any) => d.state || d.State)),
-                cities: unique(rawData.map((d: any) => d.city || d.City)),
-                regions: unique(rawData.map((d: any) => d.region || d.Region || d['Region Code'])),
-                stores: unique(rawData.map((d: any) => d.storeCode || d['Store Code'] || d['Store No'] || d['Store No.'])),
-                formats: unique(rawData.map((d: any) => d['Format'])),
-                subFormats: unique(rawData.map((d: any) => d['Sub Format']))
-              });
-            }
+            console.warn('DataContext: No data available from backend or localStorage');
           }
         }
       } catch (error) {
@@ -294,7 +279,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           // Set aggregates from backend or calculate them
           if (result.aggregates) {
             console.log('DataContext: Setting aggregates from backend:', result.aggregates);
-            setAggregates(result.aggregates);
+            setAggregates(normalizeBackendAggregates(result.aggregates));
           } else {
             console.log('DataContext: Calculating aggregates locally');
             const aggs = calculateAggregates(result.data);
@@ -352,41 +337,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Load from bundled sample CSV if backend and localStorage are empty
-  const loadFromSampleCSV = async (): Promise<boolean> => {
-    try {
-      const candidates = [
-        '/real-nps-data.csv',
-        '/comprehensive-nps-data.csv'
-      ];
-      for (const url of candidates) {
-        try {
-          const res = await fetch(url);
-          if (!res.ok) continue;
-          const csv = await res.text();
-          const parsed = Papa.parse(csv, { header: true, dynamicTyping: true, skipEmptyLines: true });
-          const rows = (parsed.data as any[]).filter(Boolean);
-          if (rows.length > 0) {
-            setRawData(rows);
-            setFilteredData(rows);
-            setHasData(true);
-            const aggs = calculateAggregates(rows);
-            setAggregates(aggs);
-            setLastUpdated(new Date());
-            saveToLocalStorage();
-            return true;
-          }
-        } catch (e) {
-          console.warn('Sample load failed for', url, e);
-        }
-      }
-      return false;
-    } catch (err) {
-      console.error('Error loading sample CSV:', err);
-      return false;
-    }
-  };
-
   const calculateAggregates = (data: NPSRecord[]): Aggregates => {
     if (data.length === 0) {
       return {
@@ -430,6 +380,28 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
   };
 
+  const normalizeBackendAggregates = (backend: any): Aggregates => {
+    const total = backend.totalResponses || backend.total || 0;
+    const promoters = backend.promoters || 0;
+    const passives = backend.passives || 0;
+    const detractors = backend.detractors || 0;
+    const npsScore = typeof backend.npsScore === 'number' ? Math.round(backend.npsScore) : 0;
+    const averageScore = typeof backend.averageNPS === 'number' 
+      ? Math.round(backend.averageNPS * 10) / 10 
+      : (total > 0 ? Math.round(((promoters * 10 + passives * 7 + detractors * 4) / total) * 10) / 10 : 0);
+    return {
+      npsScore,
+      promoters,
+      passives,
+      detractors,
+      totalResponses: total,
+      averageScore,
+      promoterPercent: total > 0 ? Math.round((promoters / total) * 100) : 0,
+      passivePercent: total > 0 ? Math.round((passives / total) * 100) : 0,
+      detractorPercent: total > 0 ? Math.round((detractors / total) * 100) : 0,
+    } as Aggregates;
+  };
+
   const applyFiltersInternal = async (newFilters: Filters): Promise<void> => {
     setIsLoading(true);
     setFilters(newFilters);
@@ -451,7 +423,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         if (result.success && result.data) {
           console.log('Filtered data from backend:', result.data.length, 'records');
           setFilteredData(result.data);
-          setAggregates(result.aggregates);
+          setAggregates(result.aggregates ? normalizeBackendAggregates(result.aggregates) : calculateAggregates(result.data));
           
           // Broadcast filter update
           window.dispatchEvent(new CustomEvent('filters-applied', {

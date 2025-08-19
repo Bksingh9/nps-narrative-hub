@@ -87,7 +87,7 @@ export function TrendPanel() {
         <TrendingUp className="w-5 h-5 text-muted-foreground" />
       </CardHeader>
       <CardContent className="pt-4">
-        <div className="h-[300px]">
+        <div className="h-[420px]">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-muted-foreground">Loading trend data...</div>

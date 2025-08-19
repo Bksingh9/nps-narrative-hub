@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Store, MapPin, TrendingUp, TrendingDown, Users, 
   MessageSquare, Calendar, Star, AlertTriangle,
-  ChevronRight, Mail, Phone, Globe
+  ChevronRight, Mail, Phone, Globe, Copy as CopyIcon, Filter as FilterIcon
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
@@ -168,6 +168,20 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
     if (nps >= 50) return '#10b981';
     if (nps >= 0) return '#f59e0b';
     return '#ef4444';
+  };
+
+  const handleCopyStoreCode = async () => {
+    try {
+      await navigator.clipboard.writeText(storeCode);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleFilterToStore = () => {
+    // Dispatch a global event that CSVDataSync listens to
+    window.dispatchEvent(new CustomEvent('apply-filters' as any, { detail: { storeCode } } as any));
+    onClose();
   };
 
   const pieData = npsMetrics ? [
@@ -403,6 +417,13 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
+                    <Badge variant="secondary">Code</Badge>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Store Code</p>
+                      <p className="font-medium">{storeDetails.storeCode}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Store Manager</p>
@@ -432,6 +453,16 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                         {storeDetails.region && ` - ${storeDetails.region} Region`}
                       </p>
                     </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" size="sm" onClick={handleCopyStoreCode}>
+                      <CopyIcon className="w-4 h-4 mr-2" /> Copy Store Code
+                    </Button>
+                    <Button variant="default" size="sm" onClick={handleFilterToStore}>
+                      <FilterIcon className="w-4 h-4 mr-2" /> Filter to this Store
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

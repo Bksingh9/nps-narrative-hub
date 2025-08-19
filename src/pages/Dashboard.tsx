@@ -97,21 +97,17 @@ export default function Dashboard() {
               {/* KPI Strip */}
               <KpiStrip />
 
-              {/* Main Grid */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                {/* Trend Panel - 2 cols */}
-                <div className="xl:col-span-2">
-                  <TrendPanel />
-                </div>
-                
-                {/* Store Table - 1 col */}
-                <div className="xl:col-span-1">
-                  <StoreTable userRole={userRole} />
-                </div>
-              </div>
+              {/* Compact Alerts under KPIs */}
+              <RealTimeAlerts compact maxAlerts={3} />
+
+              {/* Trend Panel - full width and taller */}
+              <TrendPanel />
+
+              {/* Top Performing Stores - full width below chart */}
+              <StoreTable userRole={userRole} />
 
               {/* Secondary Grid */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Driver Panel */}
                 <DriverPanel />
 

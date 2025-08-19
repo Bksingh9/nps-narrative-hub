@@ -14,15 +14,15 @@ import {
   Eye, 
   EyeOff,
   TrendingUp,
-  Shield,
-  Users,
-  BarChart3,
   AlertCircle,
   Sparkles,
   ArrowRight,
   Activity,
   Globe2,
-  Zap
+  Zap,
+  Shield,
+  Users,
+  BarChart3
 } from 'lucide-react';
 import authService from '@/services/authService';
 import { toast } from 'sonner';
@@ -59,16 +59,29 @@ export default function Login() {
     }
   };
 
-  const fillDemoCredentials = (role: 'admin' | 'manager' | 'user' | 'viewer') => {
-    const credentials = {
-      admin: { email: 'admin@trends.com', password: 'admin123' },
-      manager: { email: 'manager@trends.com', password: 'manager123' },
-      user: { email: 'user@trends.com', password: 'user123' },
-      viewer: { email: 'viewer@trends.com', password: 'viewer123' }
-    };
-    
-    setEmail(credentials[role].email);
-    setPassword(credentials[role].password);
+  const demoCredentials: Record<'admin' | 'manager' | 'viewer', { email: string; password: string }> = {
+    admin: { email: 'admin@trends.com', password: 'admin123' },
+    manager: { email: 'manager@trends.com', password: 'manager123' },
+    viewer: { email: 'viewer@trends.com', password: 'viewer123' },
+  };
+
+  const handleDemoLogin = async (role: 'admin' | 'manager' | 'viewer') => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const creds = demoCredentials[role];
+      const response = await authService.login({ email: creds.email, password: creds.password });
+      if (response.success) {
+        toast.success(`Signed in to ${role} demo account`);
+        navigate('/');
+      } else {
+        setError(response.message || 'Login failed');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -104,89 +117,75 @@ export default function Login() {
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold tracking-tight">Reliance Trends</h1>
-                  <p className="text-white/70 text-sm">NPS Intelligence Portal</p>
+                  <p className="text-white/70 text-sm">Intelligence Portal</p>
                 </div>
               </div>
               
               {/* Headline */}
               <div className="space-y-4">
                 <h2 className="text-5xl font-bold leading-tight">
-                  Transform Customer
+                  Welcome
                   <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                    Experience Analytics
+                    Please sign in to continue
                   </span>
                 </h2>
                 <p className="text-white/80 text-lg leading-relaxed">
-                  Unlock powerful insights from 7,442+ customer responses across 44 store locations. Make data-driven decisions with real-time NPS intelligence.
+                  Secure access to your dashboard.
                 </p>
               </div>
 
-              {/* Feature Cards */}
+              {/* Feature Cards (kept generic) */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="group bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105 cursor-pointer">
+                <div className="group bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg">
                       <Activity className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white mb-1">Real-time Analytics</h3>
-                      <p className="text-sm text-white/70">Live NPS tracking & trends</p>
+                      <h3 className="font-semibold text-white mb-1">Analytics</h3>
+                      <p className="text-sm text-white/70">Insights & trends</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="group bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105 cursor-pointer">
+                <div className="group bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-gradient-to-br from-green-400 to-green-600 rounded-lg">
                       <Globe2 className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white mb-1">44+ Locations</h3>
-                      <p className="text-sm text-white/70">Nationwide coverage</p>
+                      <h3 className="font-semibold text-white mb-1">Access</h3>
+                      <p className="text-sm text-white/70">Anywhere</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="group bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105 cursor-pointer">
+                <div className="group bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg">
                       <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white mb-1">AI Insights</h3>
-                      <p className="text-sm text-white/70">Smart recommendations</p>
+                      <h3 className="font-semibold text-white mb-1">AI Assist</h3>
+                      <p className="text-sm text-white/70">Optional</p>
                     </div>
                   </div>
                 </div>
                 
-                <div className="group bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20 hover:bg-white/15 transition-all duration-300 hover:scale-105 cursor-pointer">
+                <div className="group bg-white/10 backdrop-blur-md p-5 rounded-2xl border border-white/20">
                   <div className="flex items-start gap-3">
                     <div className="p-2 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg">
                       <Zap className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white mb-1">Instant Filters</h3>
-                      <p className="text-sm text-white/70">Dynamic data exploration</p>
+                      <h3 className="font-semibold text-white mb-1">Filters</h3>
+                      <p className="text-sm text-white/70">Fast</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="flex gap-8">
-                <div>
-                  <div className="text-3xl font-bold text-white">7,442+</div>
-                  <div className="text-sm text-white/70">Customer Responses</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-white">99.9%</div>
-                  <div className="text-sm text-white/70">Uptime SLA</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-white">24/7</div>
-                  <div className="text-sm text-white/70">Real-time Updates</div>
-                </div>
-              </div>
+              {/* Stats - kept removed */}
             </div>
           </div>
 
@@ -194,8 +193,8 @@ export default function Login() {
           <div className="w-full max-w-md mx-auto animate-fade-in-right">
             <div className="bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
               <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 p-8 pb-6">
-                <h2 className="text-3xl font-bold text-white text-center mb-2">Welcome Back</h2>
-                <p className="text-white/80 text-center">Sign in to continue to your dashboard</p>
+                <h2 className="text-3xl font-bold text-white text-center mb-2">Sign In</h2>
+                <p className="text-white/80 text-center">Use your credentials to continue</p>
               </div>
               
               <div className="p-8">
@@ -310,66 +309,38 @@ export default function Login() {
                       </>
                     )}
                   </Button>
-                </form>
 
-                {/* Divider */}
-                <div className="relative my-8">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/20"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-transparent px-2 text-white/60">Or continue with</span>
-                  </div>
-                </div>
-                
-                {/* Demo Accounts */}
-                <div className="space-y-3">
-                  <p className="text-sm text-center text-white/70">
-                    Quick access with demo accounts
-                  </p>
-                  <div className="grid grid-cols-3 gap-3">
+                  {/* Demo quick access */}
+                  <div className="grid grid-cols-3 gap-3 mt-3">
                     <Button
                       type="button"
+                      onClick={() => handleDemoLogin('admin')}
                       variant="outline"
-                      onClick={() => fillDemoCredentials('admin')}
+                      className="h-11 bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 rounded-xl transition-all duration-300"
                       disabled={isLoading}
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 rounded-lg transition-all duration-300 hover:scale-105"
                     >
-                      <Shield className="w-4 h-4 mr-1" />
-                      Admin
+                      <Shield className="w-4 h-4 mr-2" /> Admin
                     </Button>
                     <Button
                       type="button"
+                      onClick={() => handleDemoLogin('manager')}
                       variant="outline"
-                      onClick={() => fillDemoCredentials('manager')}
+                      className="h-11 bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 rounded-xl transition-all duration-300"
                       disabled={isLoading}
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 rounded-lg transition-all duration-300 hover:scale-105"
                     >
-                      <Users className="w-4 h-4 mr-1" />
-                      Manager
+                      <Users className="w-4 h-4 mr-2" /> Manager
                     </Button>
                     <Button
                       type="button"
+                      onClick={() => handleDemoLogin('viewer')}
                       variant="outline"
-                      onClick={() => fillDemoCredentials('viewer')}
+                      className="h-11 bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 rounded-xl transition-all duration-300"
                       disabled={isLoading}
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 rounded-lg transition-all duration-300 hover:scale-105"
                     >
-                      <BarChart3 className="w-4 h-4 mr-1" />
-                      Viewer
+                      <BarChart3 className="w-4 h-4 mr-2" /> Viewer
                     </Button>
                   </div>
-                  
-                  {/* Credentials Display */}
-                  <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-xs text-white/60 text-center mb-2">Demo Credentials:</p>
-                    <div className="space-y-1 text-xs text-white/50 text-center">
-                      <div>Admin: admin@trends.com / admin123</div>
-                      <div>Manager: manager@trends.com / manager123</div>
-                      <div>Viewer: viewer@trends.com / viewer123</div>
-                    </div>
-                  </div>
-                </div>
+                </form>
               </div>
             </div>
             

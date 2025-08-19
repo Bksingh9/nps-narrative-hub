@@ -44,6 +44,7 @@ interface Alert {
   status: 'active' | 'investigating' | 'acknowledged' | 'resolved';
   timestamp: string;
   comments?: string[];
+  reasons?: string[];
 }
 
 export default function Alerts() {
@@ -74,6 +75,15 @@ export default function Alerts() {
   useEffect(() => {
     setEmailLog(emailService.getEmailLog());
   }, []);
+
+  const DRIVER_COLUMNS: { key: string; label: string }[] = [
+    { key: 'Please rate us on the following - Staff Friendliness & Service', label: 'Staff Friendliness' },
+    { key: 'Please rate us on the following - Billing Experience', label: 'Billing Experience' },
+    { key: 'Please rate us on the following - Product Size availability', label: 'Product Size Availability' },
+    { key: 'Please rate us on the following - Store Ambience', label: 'Store Ambience' },
+    { key: 'Please rate us on the following - Trial Room Experience', label: 'Trial Room Experience' },
+    { key: 'Please rate us on the following - Product Options/ Variety', label: 'Product Options/Variety' },
+  ];
 
   const analyzeAndGenerateAlerts = () => {
     setIsAnalyzing(true);
@@ -114,6 +124,21 @@ export default function Alerts() {
         const promoters = scores.filter(s => s >= 9).length;
         const detractors = scores.filter(s => s <= 6).length;
         const currentNPS = Math.round(((promoters - detractors) / scores.length) * 100);
+        
+        // Driver analysis: average and low-score share per driver
+        const driverReasons: string[] = [];
+        DRIVER_COLUMNS.forEach(({ key, label }) => {
+          const vals = records
+            .map(r => r[key])
+            .map(v => (typeof v === 'number' ? v : parseFloat(String(v || '').trim())))
+            .filter((v: number) => !isNaN(v) && v >= 0 && v <= 10);
+          if (vals.length === 0) return;
+          const avg = vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
+          const lowShare = (vals.filter((v: number) => v <= 6).length / vals.length) * 100;
+          if (avg < 7.5 || lowShare >= 30) {
+            driverReasons.push(`${label} low (avg ${avg.toFixed(1)}, ${lowShare.toFixed(0)}% ≤6)`);
+          }
+        });
         
         // Get recent comments
         const comments = records
@@ -156,13 +181,14 @@ export default function Alerts() {
             type,
             message,
             currentNPS,
-            previousNPS: currentNPS - 5, // Simulated for demo
+            previousNPS: currentNPS - 5,
             change: -5,
             detractorCount: detractors,
             totalResponses: scores.length,
             status: severity === 'critical' ? 'active' : 'acknowledged',
             timestamp: new Date().toISOString(),
-            comments
+            comments,
+            reasons: driverReasons
           });
         }
       });
@@ -391,6 +417,17 @@ export default function Alerts() {
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <p className="font-medium">{alert.message}</p>
+                        
+                        {alert.reasons && alert.reasons.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">Likely Causes</p>
+                            <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                              {alert.reasons.slice(0, 3).map((r, i) => (
+                                <li key={i}>{r}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                           <div>
@@ -651,6 +688,17 @@ export default function Alerts() {
                   {getSeverityBadge(selectedAlert.severity)}
                 </div>
               </div>
+
+              {selectedAlert.reasons && selectedAlert.reasons.length > 0 && (
+                <div>
+                  <p className="font-medium mb-2">Likely Causes</p>
+                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                    {selectedAlert.reasons.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {selectedAlert.comments && selectedAlert.comments.length > 0 && (
                 <div>
