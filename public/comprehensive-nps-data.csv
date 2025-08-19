@@ -1,0 +1,51 @@
+Date,State,Region,City,Store Code,NPS Score,Comment
+2024-01-15,California,West,Los Angeles,CA-001,9,Excellent service and product selection
+2024-01-15,California,West,San Francisco,CA-002,8,Good experience overall
+2024-01-16,California,West,San Diego,CA-003,7,Decent store but could improve
+2024-01-16,California,West,Sacramento,CA-004,10,Outstanding customer service
+2024-01-17,Texas,South,Houston,TX-001,6,Average experience
+2024-01-17,Texas,South,Dallas,TX-002,9,Very satisfied with my visit
+2024-01-18,Texas,South,Austin,TX-003,8,Great staff and clean store
+2024-01-18,Texas,South,San Antonio,TX-004,7,Good but wait times were long
+2024-01-19,New York,Northeast,New York,NY-001,9,Impressed with the improvements
+2024-01-19,New York,Northeast,Buffalo,NY-002,5,Not satisfied with product availability
+2024-01-20,New York,Northeast,Albany,NY-003,8,Friendly staff and good selection
+2024-01-20,New York,Northeast,Rochester,NY-004,7,Decent experience overall
+2024-01-21,Florida,Southeast,Miami,FL-001,10,Best shopping experience ever
+2024-01-21,Florida,Southeast,Orlando,FL-002,8,Very good service
+2024-01-21,Florida,Southeast,Tampa,FL-003,6,Could be better
+2024-01-22,Florida,Southeast,Jacksonville,FL-004,9,Excellent store management
+2024-01-22,Illinois,Midwest,Chicago,IL-001,7,Good location and staff
+2024-01-23,Illinois,Midwest,Springfield,IL-002,8,Happy with the service
+2024-01-23,Illinois,Midwest,Peoria,IL-003,9,Great experience
+2024-01-24,Illinois,Midwest,Rockford,IL-004,5,Need improvement in customer service
+2024-01-24,Washington,West,Seattle,WA-001,10,Exceptional service
+2024-01-25,Washington,West,Spokane,WA-002,8,Good overall
+2024-01-25,Washington,West,Tacoma,WA-003,7,Average experience
+2024-01-26,Massachusetts,Northeast,Boston,MA-001,9,Very satisfied
+2024-01-26,Massachusetts,Northeast,Worcester,MA-002,8,Good service
+2024-01-27,Massachusetts,Northeast,Cambridge,MA-003,10,Perfect experience
+2024-01-27,Georgia,Southeast,Atlanta,GA-001,6,Room for improvement
+2024-01-28,Georgia,Southeast,Savannah,GA-002,8,Pleasant shopping experience
+2024-01-28,Georgia,Southeast,Augusta,GA-003,7,Satisfactory
+2024-01-29,Arizona,West,Phoenix,AZ-001,9,Great store
+2024-01-29,Arizona,West,Tucson,AZ-002,8,Good selection
+2024-01-30,Arizona,West,Mesa,AZ-003,7,Decent experience
+2024-01-30,Colorado,West,Denver,CO-001,10,Outstanding
+2024-01-31,Colorado,West,Boulder,CO-002,9,Excellent service
+2024-01-31,Colorado,West,Colorado Springs,CO-003,8,Very good
+2024-02-01,Michigan,Midwest,Detroit,MI-001,6,Average
+2024-02-01,Michigan,Midwest,Grand Rapids,MI-002,7,Good enough
+2024-02-02,Michigan,Midwest,Ann Arbor,MI-003,9,Great experience
+2024-02-02,Ohio,Midwest,Columbus,OH-001,8,Satisfied
+2024-02-03,Ohio,Midwest,Cleveland,OH-002,7,Good service
+2024-02-03,Ohio,Midwest,Cincinnati,OH-003,9,Very happy
+2024-02-04,Pennsylvania,Northeast,Philadelphia,PA-001,10,Best experience
+2024-02-04,Pennsylvania,Northeast,Pittsburgh,PA-002,8,Good store
+2024-02-05,Pennsylvania,Northeast,Harrisburg,PA-003,7,Okay experience
+2024-02-05,North Carolina,Southeast,Charlotte,NC-001,9,Excellent
+2024-02-06,North Carolina,Southeast,Raleigh,NC-002,8,Very good
+2024-02-06,North Carolina,Southeast,Durham,NC-003,10,Perfect
+2024-02-07,Virginia,Southeast,Richmond,VA-001,7,Good
+2024-02-07,Virginia,Southeast,Norfolk,VA-002,8,Satisfied
+2024-02-08,Virginia,Southeast,Alexandria,VA-003,9,Great service 

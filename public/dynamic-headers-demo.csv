@@ -1,0 +1,15 @@
+Store No,STATE,Zone,CITY,NPS Score,Response Date,Comments/feedback,Customer Name
+ST001,Maharashtra,MAH,Mumbai,9,2024-01-15,Excellent service and staff,Rahul Sharma
+ST002,Karnataka,KAR,Bangalore,8,2024-01-16,Good experience overall,Priya Patel
+ST003,Tamil Nadu,TN,Chennai,7,2024-01-17,Quick service but can improve,Arjun Kumar
+Store_No,State,REGION,Location,Rating,Date,Feedback,Name
+ST004,Gujarat,GUJ,Ahmedabad,10,2024-01-18,Outstanding experience!,Neha Shah
+ST005,Delhi,North,New Delhi,6,2024-01-19,Average service,Amit Singh
+Store Code,Province,Area,Town,Score,Survey Date,Remarks,Respondent Name
+ST006,Rajasthan,RAJ,Jaipur,8,2024-01-20,Very satisfied,Meera Gupta
+ST007,West Bengal,East,Kolkata,9,2024-01-21,Friendly staff,Sanjay Das
+Store ID,state,Territory,city,nps,Submission Date,Customer Feedback,Client Name
+ST008,Kerala,South,Kochi,7,2024-01-22,Good but room for improvement,Anita Nair
+ST009,Punjab,North,Amritsar,10,2024-01-23,Perfect experience,Harpreet Kaur
+Outlet Code,STATE,Zone,City,NPS Rating,Created Date,Review,customer_name
+ST010,Telangana,South,Hyderabad,8,2024-01-24,Satisfied with service,Venkat Reddy 

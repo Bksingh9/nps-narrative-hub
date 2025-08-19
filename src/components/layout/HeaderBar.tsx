@@ -14,15 +14,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
+  DropdownMenuLabel
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useRealTime } from "@/contexts/RealTimeContext";
+import authService from "@/services/authService";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderBarProps {
   userRole: "admin" | "user" | "store_manager";
@@ -32,6 +36,19 @@ interface HeaderBarProps {
 export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
   const { theme, setTheme } = useTheme();
   const { config, isRefreshing, refreshData } = useRealTime();
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+  
+  const getUserInitials = () => {
+    if (!currentUser) return "U";
+    const names = currentUser.name.split(" ");
+    return names.map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  };
+  
+  const handleLogout = () => {
+    authService.logout();
+    onLogout();
+  };
 
   const getRealTimeStatusIcon = () => {
     if (isRefreshing) {
@@ -102,28 +119,9 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
           <div className={`w-2 h-2 rounded-full ${getStatusColor()} ${config.autoRefreshEnabled ? 'animate-pulse' : ''}`}></div>
         </div>
         
-        {/* Auto-refresh indicator */}
-        {config.autoRefreshEnabled && (
-          <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20">
-            Auto-refresh: {config.refreshInterval}s
-          </Badge>
-        )}
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Manual Refresh Button */}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={refreshData}
-          disabled={isRefreshing}
-          className="relative"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          {config.lastUpdated && (
-            <span className="absolute -bottom-1 -right-1 w-2 h-2 bg-green-400 rounded-full"></span>
-          )}
-        </Button>
 
         {/* Theme Toggle */}
         <div className="flex items-center gap-2">
@@ -144,19 +142,34 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="flex items-center gap-2">
-              <User className="w-4 h-4" />
+              <Avatar className="h-7 w-7">
+                <AvatarImage src={currentUser?.avatar} alt={currentUser?.name} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
               <span className="hidden md:inline-block">
-                {userRole === "admin" ? "Administrator" : 
-                 userRole === "store_manager" ? "Store Manager" : "User"}
+                {currentUser?.name || 
+                 (userRole === "admin" ? "Administrator" : 
+                  userRole === "store_manager" ? "Store Manager" : "User")}
               </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{currentUser?.name}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {currentUser?.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
               <User className="w-4 h-4 mr-2" />
               Profile Settings
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/settings")}>
               <Settings className="w-4 h-4 mr-2" />
               Preferences
             </DropdownMenuItem>
@@ -171,9 +184,9 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLogout}>
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
               <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              Sign Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

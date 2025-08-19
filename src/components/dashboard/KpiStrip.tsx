@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRealTime } from "@/contexts/RealTimeContext";
-import { useEffect, useState } from "react";
+import { useData } from "@/contexts/DataContext";
+import { useMemo } from "react";
 
 interface KpiData {
   label: string;
@@ -14,112 +15,138 @@ interface KpiData {
   color: string;
 }
 
-// Mock function to simulate real-time data changes
-const generateRandomKpiData = (): KpiData[] => {
-  const baseValues = [42, 12847, 236, 38.7];
-  const randomVariations = baseValues.map(base => 
-    base + (Math.random() - 0.5) * (base * 0.1) // ±10% variation
-  );
-
-  return [
-    {
-      label: "Overall NPS",
-      value: `+${Math.round(randomVariations[0])}`,
-      change: `${randomVariations[0] > 42 ? '+' : ''}${(randomVariations[0] - 42).toFixed(1)}`,
-      trend: randomVariations[0] > 42 ? "up" : "down",
-      icon: TrendingUp,
-      color: "nps-promoter",
-    },
-    {
-      label: "Total Responses",
-      value: Math.round(randomVariations[1]).toLocaleString(),
-      change: `${randomVariations[1] > 12847 ? '+' : ''}${Math.round(((randomVariations[1] - 12847) / 12847) * 100)}%`,
-      trend: randomVariations[1] > 12847 ? "up" : "down", 
-      icon: Users,
-      color: "chart-1",
-    },
-    {
-      label: "Active Stores",
-      value: Math.round(randomVariations[2]).toString(),
-      change: `${randomVariations[2] > 236 ? '+' : ''}${Math.round(randomVariations[2] - 236)}`,
-      trend: randomVariations[2] > 236 ? "up" : "down",
-      icon: Building,
-      color: "chart-2",
-    },
-    {
-      label: "Rolling 3M Avg",
-      value: `+${randomVariations[3].toFixed(1)}`,
-      change: `${randomVariations[3] > 38.7 ? '+' : ''}${(randomVariations[3] - 38.7).toFixed(1)}`,
-      trend: randomVariations[3] > 38.7 ? "up" : "down",
-      icon: TrendingUp,
-      color: "chart-3",
-    },
-  ];
-};
-
 export function KpiStrip() {
   const { config, isRefreshing, refreshData } = useRealTime();
-  const [kpiData, setKpiData] = useState<KpiData[]>(generateRandomKpiData());
-
-  // Update KPI data when real-time refresh occurs
-  useEffect(() => {
-    if (config.autoRefreshEnabled) {
-      setKpiData(generateRandomKpiData());
+  
+  // Use DataContext for data
+  const { 
+    filteredData,
+    aggregates,
+    isLoading,
+    refreshData: refreshDataContext
+  } = useData();
+  
+  // Calculate KPI data based on aggregates from DataContext
+  const kpiData = useMemo(() => {
+    if (!aggregates || isLoading) {
+      return [
+        {
+          label: "Overall NPS",
+          value: "Loading...",
+          change: "0",
+          trend: "neutral" as const,
+          icon: TrendingUp,
+          color: "nps-promoter",
+        },
+        {
+          label: "Total Responses",
+          value: "Loading...",
+          change: "0%",
+          trend: "neutral" as const,
+          icon: Users,
+          color: "chart-1",
+        },
+        {
+          label: "Active Stores",
+          value: "Loading...",
+          change: "0",
+          trend: "neutral" as const,
+          icon: Building,
+          color: "chart-2",
+        },
+        {
+          label: "Avg Score",
+          value: "Loading...",
+          change: "0.0",
+          trend: "neutral" as const,
+          icon: TrendingUp,
+          color: "chart-3",
+        },
+      ];
     }
-  }, [config.lastUpdated]);
 
-  const handleManualRefresh = () => {
-    setKpiData(generateRandomKpiData());
-    refreshData();
-  };
+    // Calculate unique stores from filtered data
+    const uniqueStores = new Set(
+      filteredData.map(d => d.storeCode || d['Store Code'] || d['Store No'] || 'Unknown')
+    ).size;
 
-  const getConnectionIndicator = () => {
-    switch (config.connectionStatus) {
-      case 'connected':
-        return <Wifi className="w-4 h-4 text-green-500" />;
-      case 'connecting':
-        return <RefreshCw className="w-4 h-4 text-yellow-500 animate-spin" />;
-      case 'error':
-        return <Wifi className="w-4 h-4 text-red-500" />;
-      default:
-        return <Wifi className="w-4 h-4 text-gray-400" />;
+    // Use aggregates from DataContext for NPS calculation
+    const nps = aggregates.npsScore || 0;
+    const totalResponses = aggregates.totalResponses || 0;
+    const avgScore = aggregates.averageScore || 0;
+    
+    // TODO: Calculate changes when historical data is available
+    const npsChange = 0;
+    const responseChange = 0;
+    const storeChange = 0;
+    const avgChange = 0;
+
+    return [
+      {
+        label: "Overall NPS",
+        value: `${nps >= 0 ? '+' : ''}${nps}`,
+        change: `${npsChange >= 0 ? '+' : ''}${npsChange}`,
+        trend: npsChange > 0 ? "up" as const : npsChange < 0 ? "down" as const : "neutral" as const,
+        icon: TrendingUp,
+        color: "nps-promoter",
+      },
+      {
+        label: "Total Responses",
+        value: totalResponses.toLocaleString(),
+        change: `${responseChange >= 0 ? '+' : ''}${responseChange}%`,
+        trend: responseChange > 0 ? "up" as const : responseChange < 0 ? "down" as const : "neutral" as const,
+        icon: Users,
+        color: "chart-1",
+      },
+      {
+        label: "Active Stores",
+        value: uniqueStores.toString(),
+        change: `${storeChange >= 0 ? '+' : ''}${storeChange}`,
+        trend: storeChange > 0 ? "up" as const : storeChange < 0 ? "down" as const : "neutral" as const,
+        icon: Building,
+        color: "chart-2",
+      },
+      {
+        label: "Avg Score",
+        value: avgScore.toFixed(1),
+        change: `${avgChange >= 0 ? '+' : ''}${avgChange}`,
+        trend: parseFloat(avgChange.toString()) > 0 ? "up" as const : parseFloat(avgChange.toString()) < 0 ? "down" as const : "neutral" as const,
+        icon: TrendingUp,
+        color: "chart-3",
+      },
+    ];
+  }, [aggregates, filteredData, isLoading]);
+
+  const handleRefresh = async () => {
+    await refreshDataContext();
+    if (refreshData) {
+      refreshData();
     }
   };
 
   return (
     <div className="space-y-4">
-      {/* Real-time Status Bar */}
-      <div className="flex items-center justify-between bg-card/50 p-3 rounded-lg border">
-        <div className="flex items-center gap-3">
-          {getConnectionIndicator()}
-          <span className="text-sm font-medium">
-            Real-time Data {config.autoRefreshEnabled ? 'Active' : 'Paused'}
-          </span>
-          {config.lastUpdated && (
-            <span className="text-xs text-muted-foreground">
-              Last updated: {new Date(config.lastUpdated).toLocaleTimeString?.() || ''}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {config.autoRefreshEnabled && (
-            <Badge variant="outline" className="bg-green-500/10 text-green-400 border-green-500/20">
-              Auto-refresh: {config.refreshInterval}s
+      {/* Real-time sync status */}
+      {config.autoRefreshEnabled && (
+        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg animate-fade-in">
+          <div className="flex items-center gap-2">
+            <Wifi className="w-4 h-4 text-green-500" />
+            <span className="text-sm font-medium">Real-time data sync active</span>
+            <Badge variant="outline" className="text-xs">
+              Every {config.refreshInterval / 1000}s
             </Badge>
-          )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleRefresh}
+            disabled={isRefreshing || isLoading}
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh Now
+            <RefreshCw className={`w-4 h-4 ${(isRefreshing || isLoading) ? 'animate-spin' : ''}`} />
           </Button>
         </div>
-      </div>
+      )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpiData.map((kpi) => (
           <Card 
@@ -156,8 +183,10 @@ export function KpiStrip() {
               <div className="mt-4 flex items-center gap-2 text-sm">
                 {kpi.trend === "up" ? (
                   <TrendingUp className="w-4 h-4 text-nps-promoter" />
-                ) : (
+                ) : kpi.trend === "down" ? (
                   <TrendingDown className="w-4 h-4 text-destructive" />
+                ) : (
+                  <span className="w-4 h-4" />
                 )}
                 <span className="text-muted-foreground">vs last period</span>
                 {config.autoRefreshEnabled && (

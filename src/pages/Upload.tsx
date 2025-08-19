@@ -1,256 +1,648 @@
-import { useEffect, useMemo, useState } from "react";
-import { HeaderBar } from "@/components/layout/HeaderBar";
-import { SideNav } from "@/components/layout/SideNav";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Upload as UploadIcon, FileText, Clock, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
-import Papa from 'papaparse';
-import { setRecords, safeGetRecords } from "@/lib/data";
-import { toast } from "sonner";
-interface NpsRow {
-  "Response Date": string;
-  State: string;
-  Region: string;
-  City: string;
-  "Store Code": string | number;
-  "NPS Score": string | number;
-  [key: string]: any;
-}
-
-interface UploadItem {
-  id: string;
-  filename: string;
-  date: string;
-  status: "completed" | "failed" | "processing";
-  records: number;
-  processing_time?: string;
-  error?: string;
-}
-
-function loadHistory(): UploadItem[] {
-  try { return JSON.parse(localStorage.getItem('nps-upload-history') || '[]'); } catch { return []; }
-}
-function saveHistory(items: UploadItem[]) { localStorage.setItem('nps-upload-history', JSON.stringify(items)); }
-function loadRecords(): any[] { try { return JSON.parse(localStorage.getItem('nps-records') || '[]'); } catch { return []; } }
-function saveRecords(rows: any[]) { localStorage.setItem('nps-records', JSON.stringify(rows)); }
+import { useState, useEffect } from 'react';
+import { HeaderBar } from '@/components/layout/HeaderBar';
+import { SideNav } from '@/components/layout/SideNav';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+import { 
+  Upload as UploadIcon, 
+  FileText, 
+  AlertCircle, 
+  CheckCircle, 
+  Download,
+  Loader2,
+  Filter,
+  Calendar as CalendarIcon,
+  RefreshCw,
+  Trash2,
+  TrendingUp,
+  Users,
+  Store
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import csvDataService, { FilterOptions, FilterOptionsResponse } from '@/services/csvDataService';
+import authService from '@/services/authService';
+import { useNavigate } from 'react-router-dom';
+import DataExportButton from '@/components/DataExportButton';
+import { toast } from 'sonner';
 
 export default function Upload() {
-  const [userRole] = useState<"admin" | "user" | "store_manager">("admin");
-  const [isDragging, setIsDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+  const [userRole] = useState<'admin' | 'user' | 'store_manager'>(currentUser?.role || 'user');
+  
+  // Redirect non-admin users
+  useEffect(() => {
+    if (currentUser?.role !== 'admin') {
+      toast.error('Access denied. Only administrators can upload data.');
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [history, setHistory] = useState<UploadItem[]>(loadHistory());
-  const [totalRecords, setTotalRecords] = useState(safeGetRecords().length);
+  const [isFiltering, setIsFiltering] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadMessage, setUploadMessage] = useState('');
+  
+  // Data state
+  const [currentData, setCurrentData] = useState<any[]>([]);
+  const [metadata, setMetadata] = useState<any>(null);
+  const [filterOptions, setFilterOptions] = useState<FilterOptionsResponse | null>(null);
+  
+  // Filter state
+  const [filters, setFilters] = useState<FilterOptions>({});
+  const [dateFrom, setDateFrom] = useState<Date>();
+  const [dateTo, setDateTo] = useState<Date>();
+  
+  // Aggregates
+  const [aggregates, setAggregates] = useState<any>(null);
 
-  const handleLogout = () => {};
+  // Load initial state on mount
+  useEffect(() => {
+    loadInitialState();
+  }, []);
 
-  // Schema-agnostic normalizer for CSV rows
-  const normalizeRow = (r: any) => {
-    const get = (obj: any, keys: string[]) => keys.find(k => obj[k] !== undefined);
-    const dateKey = get(r, ["Response Date","Survey Date","Submission Time","Timestamp","Date"]);
-    const npsKey  = get(r, ["NPS Score","NPS_Score","NPS","Overall Rating","Rating","Score"]);
-    const stateKey = get(r, ["State","STATE"]);
-    const regionKey = get(r, ["Region","REGION","Zone","Cluster","Area"]);
-    const cityKey = get(r, ["City","CITY","Town","Location"]);
-    const storeKey = get(r, ["Store Code","Store_ID","Outlet Code","Location Code","Store","Outlet"]);
-    const commentsKey = get(r, ["Comments","Feedback","Remark","Observation"]);
-    const rawScore = npsKey ? r[npsKey] : undefined;
-    const parsedScore = typeof rawScore === 'number' ? rawScore : parseFloat(String(rawScore ?? '').replace(/[, ]/g,''));
-    return {
-      responseDate: dateKey ? r[dateKey] : undefined,
-      state: (stateKey ? r[stateKey] : '').toString().trim(),
-      region: (regionKey ? r[regionKey] : '').toString().trim(),
-      city: (cityKey ? r[cityKey] : '').toString().trim(),
-      storeCode: String(storeKey ? r[storeKey] : '').trim(),
-      nps: Number.isFinite(parsedScore) ? parsedScore : undefined,
-      comments: commentsKey ? r[commentsKey] : undefined,
-    };
-  };
-
-  const dedupeMerge = (existing: any[], incoming: any[]) => {
-    const seen = new Set(existing.map(r => JSON.stringify(r)));
-    const merged = [...existing];
-    for (const row of incoming) {
-      const key = JSON.stringify(row);
-      if (!seen.has(key)) {
-        merged.push(row);
-        seen.add(key);
-      }
+  // Apply filters when they change
+  useEffect(() => {
+    if (metadata) {
+      applyFilters();
     }
-    return merged;
-  };
-  const parseAndPersist = async (files: FileList) => {
-    const start = performance.now();
-    const allNew: any[] = [];
+  }, [filters, dateFrom, dateTo]);
 
-    for (const file of Array.from(files)) {
-      const text = await file.text();
-      const result = Papa.parse<any>(text, { header: true, skipEmptyLines: true, dynamicTyping: true, transformHeader: (h) => h.trim() });
-      const rows = (result.data || []) as any[];
-      let added = 0;
-      for (const r of rows) {
-        if (!r) continue;
-        const norm = normalizeRow(r);
-        if (norm.responseDate && norm.nps !== undefined) {
-          (r as any)._normalized = norm;
-          allNew.push(r);
-          added++;
-        }
+  const loadInitialState = async () => {
+    try {
+      // Check if there's data on the server
+      const currentState = await csvDataService.getCurrentDataState();
+      
+      if (currentState.hasData) {
+        setMetadata(currentState.metadata);
+        
+        // Load filter options
+        const options = await csvDataService.getFilterOptions();
+        setFilterOptions(options);
+        
+        // Load initial data
+        await applyFilters();
+        
+        toast.success('Previous data session restored');
       }
+    } catch (error) {
+      console.error('Error loading initial state:', error);
+    }
+  };
 
-      // update history entry for this file
-      const item: UploadItem = {
-        id: `${Date.now()}-${file.name}`,
-        filename: file.name,
-        date: new Date().toLocaleString(),
-        status: 'completed',
-        records: added,
-        processing_time: `${Math.max(1, Math.round((performance.now()-start)/1000))}s`
-      };
-      setHistory(prev => {
-        const next = [item, ...prev];
-        saveHistory(next);
-        return next;
-      });
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.name.endsWith('.csv')) {
+        toast.error('Please select a CSV file');
+        return;
+      }
+      setSelectedFile(file);
+      setUploadStatus('idle');
+      setUploadMessage('');
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      toast.error('Please select a file');
+      return;
     }
 
-    // Merge and persist records
-    const existing = safeGetRecords();
-    const merged = dedupeMerge(existing, allNew);
-    setRecords(merged);
-    setTotalRecords(merged.length);
-    toast.success(`Saved dataset: ${merged.length.toLocaleString()} records`);
-  };
-
-  const handleFileUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
     setIsUploading(true);
-    setUploadProgress(0);
+    setUploadStatus('uploading');
+    setUploadMessage('Processing CSV file...');
 
-    // fake progress while parsing
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) { clearInterval(interval); return 100; }
-        return prev + 12;
-      });
-    }, 200);
-
-    parseAndPersist(files)
-      .catch(() => {})
-      .finally(() => setIsUploading(false));
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setIsDragging(false); handleFileUpload(e.dataTransfer.files);
-  };
-  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
-  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed": return <CheckCircle className="w-4 h-4 text-nps-promoter" />;
-      case "failed": return <AlertCircle className="w-4 h-4 text-destructive" />;
-      case "processing": return <Clock className="w-4 h-4 text-nps-passive animate-spin" />;
-      default: return <FileText className="w-4 h-4 text-muted-foreground" />;
+    try {
+      const result = await csvDataService.uploadCSV(selectedFile);
+      
+      if (result.success) {
+        setMetadata(result.metadata);
+        setUploadStatus('success');
+        setUploadMessage(`Successfully processed ${result.totalRecords} records`);
+        
+        // Load filter options
+        const options = await csvDataService.getFilterOptions();
+        setFilterOptions(options);
+        
+        // Reset filters and load all data
+        setFilters({});
+        setDateFrom(undefined);
+        setDateTo(undefined);
+        await applyFilters();
+        
+        toast.success('CSV uploaded and processed successfully');
+      } else {
+        throw new Error(result.error || 'Upload failed');
+      }
+    } catch (error: any) {
+      setUploadStatus('error');
+      setUploadMessage(error.message || 'Failed to upload file');
+      toast.error(error.message || 'Upload failed');
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const deleteHistoryItem = (id: string) => {
-    const next = history.filter(h => h.id !== id);
-    setHistory(next);
-    saveHistory(next);
+  const applyFilters = async () => {
+    setIsFiltering(true);
+    
+    try {
+      const filterParams: FilterOptions = {
+        ...filters,
+        dateFrom: dateFrom?.toISOString(),
+        dateTo: dateTo?.toISOString(),
+      };
+      
+      const result = await csvDataService.filterData(filterParams);
+      
+      if (result.success) {
+        setCurrentData(result.data);
+        setAggregates(result.aggregates);
+      }
+    } catch (error: any) {
+      toast.error('Failed to apply filters');
+      console.error('Filter error:', error);
+    } finally {
+      setIsFiltering(false);
+    }
+  };
+
+  const handleClearData = async () => {
+    if (confirm('Are you sure you want to clear all data?')) {
+      try {
+        await csvDataService.clearData();
+        setCurrentData([]);
+        setMetadata(null);
+        setFilterOptions(null);
+        setAggregates(null);
+        setFilters({});
+        setDateFrom(undefined);
+        setDateTo(undefined);
+        toast.success('Data cleared successfully');
+      } catch (error) {
+        toast.error('Failed to clear data');
+      }
+    }
+  };
+
+  const handleExport = () => {
+    if (currentData.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+    
+    csvDataService.exportToCSV(currentData);
+    toast.success('Data exported successfully');
+  };
+
+  const handleLogout = () => {
+    console.log('Logout clicked');
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <HeaderBar userRole={userRole} onLogout={handleLogout} />
-      <div className="flex">
+    <div className="flex h-screen bg-gray-50">
         <SideNav userRole={userRole} />
-        <main className="flex-1 p-6 space-y-6 animate-fade-in">
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <HeaderBar 
+          userRole={userRole}
+          onLogout={handleLogout}
+        />
+        
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            {/* Header */}
+            <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold">Data Upload</h1>
-            <p className="text-muted-foreground">Upload CSV files. Data is persisted locally and deduplicated.</p>
-          </div>
-
-          <Card className="bg-gradient-chart border-muted">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <UploadIcon className="w-5 h-5 text-primary" />
-                Upload Survey Data
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
-                  isDragging ? "border-primary bg-primary/5" : "border-muted hover:border-primary/50"
-                }`}
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-              >
-                <UploadIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Drag & drop your files here</h3>
-                <p className="text-muted-foreground mb-4">Supports CSV up to 50MB</p>
-                <Button onClick={() => document.getElementById('file-input')?.click()} disabled={isUploading}>Choose Files</Button>
-                <input id="file-input" type="file" accept=".csv" multiple className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
+                <h1 className="text-3xl font-bold text-gray-900">Real-Time CSV Data Processing</h1>
+                <p className="text-gray-600 mt-1">Upload and analyze NPS data with dynamic filtering</p>
               </div>
-
-              {isUploading && (
-                <div className="mt-6 space-y-2">
-                  <div className="flex justify-between text-sm"><span>Uploading...</span><span>{uploadProgress}%</span></div>
-                  <Progress value={uploadProgress} className="w-full" />
+              {metadata && (
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={handleExport}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </Button>
+                  <Button variant="destructive" onClick={handleClearData}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Clear Data
+                  </Button>
                 </div>
               )}
+            </div>
 
-              <div className="mt-6 p-4 bg-background/50 rounded-lg">
-                <h4 className="font-medium mb-2">Current dataset</h4>
-                <p className="text-sm text-muted-foreground">{totalRecords.toLocaleString()} records stored locally</p>
-                <div className="mt-3">
-                  <Button variant="outline" size="sm" onClick={() => { const rows = safeGetRecords(); setRecords(rows); toast.success(`Saved dataset: ${rows.length.toLocaleString()} records`); }}>Save Data</Button>
+            {/* KPI Cards */}
+            {aggregates && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">NPS Score</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold">{Math.round(aggregates.npsScore || 0)}</span>
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Total Responses</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold">{aggregates.totalResponses || 0}</span>
+                      <Users className="w-4 h-4 text-blue-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Promoters</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-green-600">{aggregates.promoters || 0}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {aggregates.totalResponses > 0 
+                          ? `${Math.round((aggregates.promoters / aggregates.totalResponses) * 100)}%`
+                          : '0%'}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-gray-600">Detractors</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-red-600">{aggregates.detractors || 0}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {aggregates.totalResponses > 0 
+                          ? `${Math.round((aggregates.detractors / aggregates.totalResponses) * 100)}%`
+                          : '0%'}
+                            </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            <Tabs defaultValue="upload" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="upload">Upload CSV</TabsTrigger>
+                <TabsTrigger value="filters" disabled={!metadata}>Filters</TabsTrigger>
+                <TabsTrigger value="data" disabled={!currentData.length}>Data Preview</TabsTrigger>
+              </TabsList>
+
+              {/* Upload Tab */}
+              <TabsContent value="upload">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Upload CSV File</CardTitle>
+                    <CardDescription>
+                      Upload your NPS data CSV file. The system will automatically detect columns for Response Date, State, Store Code, and NPS scores.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      
+                      <div className="mt-4">
+                        <Label htmlFor="file-upload" className="cursor-pointer">
+                          <span className="mt-2 block text-sm font-medium text-gray-900">
+                            Click to upload or drag and drop
+                          </span>
+                          <Input
+                            id="file-upload"
+                            type="file"
+                            accept=".csv"
+                            onChange={handleFileSelect}
+                            className="sr-only"
+                          />
+                        </Label>
+                        <p className="mt-1 text-xs text-gray-500">CSV files up to 10MB</p>
+                      </div>
+                      
+                      {selectedFile && (
+                        <div className="mt-4 flex items-center justify-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span className="text-sm font-medium">{selectedFile.name}</span>
+                          <Badge variant="outline">{(selectedFile.size / 1024).toFixed(2)} KB</Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    {uploadStatus !== 'idle' && (
+                      <Alert className={cn(
+                        uploadStatus === 'success' && 'border-green-500',
+                        uploadStatus === 'error' && 'border-red-500'
+                      )}>
+                        {uploadStatus === 'uploading' && <Loader2 className="h-4 w-4 animate-spin" />}
+                        {uploadStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
+                        {uploadStatus === 'error' && <AlertCircle className="h-4 w-4 text-red-500" />}
+                        <AlertDescription>{uploadMessage}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Button 
+                      onClick={handleUpload} 
+                      disabled={!selectedFile || isUploading}
+                      className="w-full"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <UploadIcon className="mr-2 h-4 w-4" />
+                          Upload and Process
+                        </>
+                      )}
+                    </Button>
+
+                    {metadata && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-medium mb-2">Upload Summary</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Total Records:</span>
+                            <span className="font-medium">{metadata.totalRecords}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Date Range:</span>
+                            <span className="font-medium">
+                              {metadata.dateRange?.from && metadata.dateRange?.to
+                                ? `${format(new Date(metadata.dateRange.from), 'MMM d, yyyy')} - ${format(new Date(metadata.dateRange.to), 'MMM d, yyyy')}`
+                                : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Average NPS:</span>
+                            <span className="font-medium">{metadata.aggregates?.averageNPS?.toFixed(1) || 'N/A'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Filters Tab */}
+              <TabsContent value="filters">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Real-Time Filters</CardTitle>
+                    <CardDescription>
+                      Apply filters to analyze specific segments of your data
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Date Range Filter */}
+                      <div className="space-y-2">
+                        <Label>Date From</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !dateFrom && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateFrom ? format(dateFrom, "PPP") : "Select date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={dateFrom}
+                              onSelect={setDateFrom}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Date To</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !dateTo && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {dateTo ? format(dateTo, "PPP") : "Select date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={dateTo}
+                              onSelect={setDateTo}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      {/* State Filter */}
+                      <div className="space-y-2">
+                        <Label>State</Label>
+                        <Select 
+                          value={filters.state || 'all'} 
+                          onValueChange={(value) => setFilters({...filters, state: value === 'all' ? undefined : value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All States" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All States</SelectItem>
+                            {filterOptions?.states.map(state => (
+                              <SelectItem key={state} value={state}>{state}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Store Code Filter */}
+                      <div className="space-y-2">
+                        <Label>Store Code</Label>
+                        <Select 
+                          value={filters.storeCode || 'all'} 
+                          onValueChange={(value) => setFilters({...filters, storeCode: value === 'all' ? undefined : value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All Stores" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Stores</SelectItem>
+                            {filterOptions?.stores.map(store => (
+                              <SelectItem key={(store as any).code || store as any} value={(store as any).code || (store as any)}>
+                                {(store as any).code ? `${(store as any).code} - ${(store as any).name}` : (store as any)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Region Filter */}
+                      <div className="space-y-2">
+                        <Label>Region</Label>
+                        <Select 
+                          value={filters.region || 'all'} 
+                          onValueChange={(value) => setFilters({...filters, region: value === 'all' ? undefined : value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All Regions" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Regions</SelectItem>
+                            {filterOptions?.regions.map(region => (
+                              <SelectItem key={region} value={region}>{region}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* NPS Category Filter */}
+                      <div className="space-y-2">
+                        <Label>NPS Category</Label>
+                        <Select 
+                          value={filters.npsCategory || 'all'} 
+                          onValueChange={(value) => setFilters({...filters, npsCategory: value === 'all' ? undefined : value as any})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="All Categories" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="Promoter">Promoters (9-10)</SelectItem>
+                            <SelectItem value="Passive">Passives (7-8)</SelectItem>
+                            <SelectItem value="Detractor">Detractors (0-6)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                  </div>
+                </div>
+                
+                    <Separator />
+
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm text-gray-600">
+                        Showing {currentData.length} of {metadata?.totalRecords || 0} records
+                      </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                          onClick={() => {
+                            setFilters({});
+                            setDateFrom(undefined);
+                            setDateTo(undefined);
+                          }}
+                        >
+                          Clear Filters
+                  </Button>
+                        <Button onClick={applyFilters} disabled={isFiltering}>
+                          {isFiltering ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Applying...
+                            </>
+                          ) : (
+                            <>
+                              <Filter className="mr-2 h-4 w-4" />
+                              Apply Filters
+                            </>
+                          )}
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
+              </TabsContent>
 
-          <Card className="bg-gradient-chart border-muted">
+              {/* Data Preview Tab */}
+              <TabsContent value="data">
+                <Card>
             <CardHeader>
-              <CardTitle>Upload History</CardTitle>
+                    <CardTitle>Data Preview</CardTitle>
+                    <CardDescription>
+                      Showing filtered NPS data records
+                    </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {history.map(upload => (
-                  <div key={upload.id} className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(upload.status)}
-                      <div>
-                        <h4 className="font-medium">{upload.filename}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {upload.date}
-                          {upload.status === 'completed' && (<>
-                            {' '}• {upload.records.toLocaleString()} records • {upload.processing_time}
-                          </>)}
-                          {upload.status === 'failed' && (<> • {upload.error}</>)}
-                        </p>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Store Code</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Store Name</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">State</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">NPS Score</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Response Date</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {currentData.slice(0, 10).map((record, index) => (
+                            <tr key={record.id || index}>
+                              <td className="px-4 py-2 text-sm">{record.storeCode}</td>
+                              <td className="px-4 py-2 text-sm">{record.storeName}</td>
+                              <td className="px-4 py-2 text-sm">{record.state}</td>
+                              <td className="px-4 py-2 text-sm">{record.region}</td>
+                              <td className="px-4 py-2 text-sm">
+                                <Badge variant={
+                                  record.npsCategory === 'Promoter' ? 'default' :
+                                  record.npsCategory === 'Passive' ? 'secondary' : 'destructive'
+                                }>
+                                  {record.npsScore}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                <Badge variant="outline">{record.npsCategory}</Badge>
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                {record.responseDate ? format(new Date(record.responseDate), 'MMM d, yyyy') : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {currentData.length > 10 && (
+                        <div className="mt-4 text-center text-sm text-gray-500">
+                          Showing 10 of {currentData.length} records
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={upload.status === 'completed' ? 'default' : upload.status === 'failed' ? 'destructive' : 'secondary'}>
-                        {upload.status}
-                      </Badge>
-                      <Button variant="ghost" size="icon" onClick={() => deleteHistoryItem(upload.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {history.length === 0 && (
-                  <div className="text-sm text-muted-foreground">No uploads yet.</div>
-                )}
+                      )}
               </div>
             </CardContent>
           </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
         </main>
       </div>
     </div>

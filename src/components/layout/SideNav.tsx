@@ -5,9 +5,7 @@ import {
   Building, 
   Upload, 
   AlertTriangle, 
-  Settings,
-  TrendingUp,
-  MapPin
+  Settings
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -36,38 +34,26 @@ const navItems = [
     title: "Store Performance",
     icon: Building,
     href: "/stores",
-    roles: ["admin", "store_manager"],
-  },
-  {
-    title: "Driver Analysis", 
-    icon: TrendingUp,
-    href: "/drivers",
-    roles: ["admin", "user"],
-  },
-  {
-    title: "Regional Insights",
-    icon: MapPin,
-    href: "/regions",
-    roles: ["admin", "user"],
+    roles: ["admin", "user", "store_manager"],
   },
   {
     title: "Upload Data",
     icon: Upload,
     href: "/upload",
-    roles: ["admin"],
+    roles: ["admin"], // Only admin can upload
   },
   {
     title: "Alerts",
     icon: AlertTriangle,
     href: "/alerts",
-    roles: ["admin"],
+    roles: ["admin", "store_manager"], // Admin and manager can see alerts
     badge: 3,
   },
   {
     title: "Settings",
     icon: Settings,
     href: "/settings",
-    roles: ["admin"],
+    roles: ["admin"], // Only admin can access settings
   },
 ];
 

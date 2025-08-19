@@ -7,33 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, Target, Lightbulb } from "lucide-react";
 
-// Mock detailed driver insights
-const driverInsights = [
-  {
-    category: "Service Quality",
-    drivers: [
-      { name: "Staff Helpfulness", score: 4.1, correlation: 0.72, impact: "high" },
-      { name: "Product Knowledge", score: 3.9, correlation: 0.68, impact: "high" },
-      { name: "Checkout Speed", score: 3.8, correlation: 0.58, impact: "medium" }
-    ]
-  },
-  {
-    category: "Store Environment", 
-    drivers: [
-      { name: "Store Cleanliness", score: 4.2, correlation: 0.78, impact: "high" },
-      { name: "Store Layout", score: 4.0, correlation: 0.45, impact: "low" },
-      { name: "Temperature Comfort", score: 3.7, correlation: 0.42, impact: "low" }
-    ]
-  },
-  {
-    category: "Product & Pricing",
-    drivers: [
-      { name: "Product Availability", score: 3.8, correlation: 0.65, impact: "medium" },
-      { name: "Price Value", score: 3.5, correlation: 0.62, impact: "medium" },
-      { name: "Product Quality", score: 4.1, correlation: 0.59, impact: "medium" }
-    ]
-  }
-];
+
 
 export default function Drivers() {
   const [userRole] = useState<"admin" | "user" | "store_manager">("admin");
@@ -79,44 +53,14 @@ export default function Drivers() {
           {/* Main Driver Panel */}
           <DriverPanel />
 
-          {/* Detailed Category Analysis */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {driverInsights.map((category) => (
-              <Card key={category.category} className="bg-gradient-chart border-muted">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Lightbulb className="w-5 h-5" />
-                    {category.category}
-                  </CardTitle>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  {category.drivers.map((driver) => (
-                    <div key={driver.name} className="p-3 rounded-lg bg-background/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-sm">{driver.name}</h4>
-                        {getImpactBadge(driver.impact)}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Score: {driver.score}/5</span>
-                          <span>r = {driver.correlation.toFixed(2)}</span>
-                        </div>
-                        
-                        {/* Correlation Bar */}
-                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-primary to-nps-promoter rounded-full transition-all duration-500"
-                            style={{ width: `${driver.correlation * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            ))}
+          {/* Empty state for detailed driver analysis */}
+          <div className="grid grid-cols-1">
+            <Card className="p-8 text-center">
+              <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">
+                No detailed driver data available. Upload NPS data with driver metrics to see category analysis.
+              </p>
+            </Card>
           </div>
 
           {/* Key Recommendations */}

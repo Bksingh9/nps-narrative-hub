@@ -80,36 +80,67 @@ export class AIService {
       let systemPrompt = '';
       let userPrompt = '';
 
+      // Get system prompts from configuration
+      const config = localStorage.getItem('system_config');
+      const systemPrompts = config ? JSON.parse(config).systemPrompts : {};
+      
       switch (request.analysisType) {
         case 'insights':
-          systemPrompt = 'You are an expert retail analyst specializing in NPS data. Provide actionable insights based on the provided data.';
+          systemPrompt = systemPrompts.insights || 'You are an expert retail analyst specializing in NPS data. Provide actionable insights based on the provided data.';
           userPrompt = `Analyze this NPS data and provide key insights:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters applied: ${JSON.stringify(request.filters)}\n\nProvide 3-5 bullet points with specific recommendations.`;
           break;
         case 'escalation':
-          systemPrompt = 'You are a retail operations expert. Identify critical issues that require immediate escalation based on NPS data patterns.';
+          systemPrompt = systemPrompts.escalation || 'You are a retail operations expert. Identify critical issues that require immediate escalation based on NPS data patterns.';
           userPrompt = `Review this data for critical issues requiring escalation:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters: ${JSON.stringify(request.filters)}\n\nIdentify issues with severity levels and recommended actions.`;
           break;
         case 'trends':
-          systemPrompt = 'You are a data scientist specializing in trend analysis. Identify patterns and predict future trends in NPS data.';
+          systemPrompt = systemPrompts.trends || 'You are a data scientist specializing in trend analysis. Identify patterns and predict future trends in NPS data.';
           userPrompt = `Analyze trends in this data:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters: ${JSON.stringify(request.filters)}\n\nProvide trend analysis and forecasting insights.`;
           break;
       }
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Get model configuration
+      const systemConfig = localStorage.getItem('system_config');
+      const model = systemConfig ? JSON.parse(systemConfig).model : 'gpt-3.5-turbo';
+      const fallbackModel = systemConfig ? JSON.parse(systemConfig).fallbackModel : 'gpt-3.5-turbo';
+      
+      let response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: model, // Use configured model (GPT-4 Turbo)
           temperature: 0.3,
+          max_tokens: 2000,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
         }),
       });
+      
+      // If GPT-4 fails, try fallback model
+      if (!response.ok && response.status === 429) {
+        console.log('GPT-4 rate limited, trying fallback model...');
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`,
+          },
+          body: JSON.stringify({
+            model: fallbackModel,
+            temperature: 0.3,
+            max_tokens: 1500,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+          }),
+        });
+      }
 
       if (!response.ok) {
         throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);

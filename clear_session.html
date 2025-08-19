@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Session - NPS Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .success {
+            color: #10b981;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+        .info {
+            color: #6b7280;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Session Manager</h1>
+        <p>Use this tool to manage your NPS Dashboard session</p>
+        
+        <button onclick="clearSession()">Clear Session & Force Login</button>
+        <button onclick="clearAll()">Clear All Data</button>
+        <button onclick="goToLogin()">Go to Login</button>
+        
+        <div id="message"></div>
+        
+        <div class="info">
+            <p>Default Login Credentials:</p>
+            <strong>Admin:</strong> admin@reliancetrends.com / admin123<br>
+            <strong>Manager:</strong> manager@trends.com / manager123<br>
+            <strong>User:</strong> user@trends.com / user123
+        </div>
+    </div>
+    
+    <script>
+        function clearSession() {
+            // Clear authentication
+            localStorage.removeItem('auth-token');
+            localStorage.removeItem('current-user');
+            sessionStorage.clear();
+            
+            document.getElementById('message').innerHTML = '<div class="success">✅ Session cleared! Redirecting to login...</div>';
+            
+            setTimeout(() => {
+                window.location.href = 'http://localhost:8081/login';
+            }, 1500);
+        }
+        
+        function clearAll() {
+            // Clear everything
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            document.getElementById('message').innerHTML = '<div class="success">✅ All data cleared! Redirecting to login...</div>';
+            
+            setTimeout(() => {
+                window.location.href = 'http://localhost:8081/login';
+            }, 1500);
+        }
+        
+        function goToLogin() {
+            window.location.href = 'http://localhost:8081/login';
+        }
+    </script>
+</body>
+</html> 
