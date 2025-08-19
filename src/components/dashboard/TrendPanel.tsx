@@ -1,12 +1,15 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { TrendingUp } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { TrendingUp, BarChart3, LineChart as LineChartIcon } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 export function TrendPanel() {
   // Use DataContext for data
   const { filteredData, isLoading } = useData();
+  const [chartType, setChartType] = useState<"line" | "bar">("line");
 
   // Calculate daily NPS trends from filtered data
   const chartData = useMemo(() => {
@@ -84,7 +87,16 @@ export function TrendPanel() {
     <Card className="bg-gradient-chart hover:shadow-xl transition-all duration-300">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-medium">NPS Trend Analysis</CardTitle>
-        <TrendingUp className="w-5 h-5 text-muted-foreground" />
+        <div className="flex items-center gap-2">
+          <ToggleGroup type="single" value={chartType} onValueChange={(value) => value && setChartType(value as "line" | "bar")}>
+            <ToggleGroupItem value="line" aria-label="Line chart" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+              <LineChartIcon className="w-4 h-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="bar" aria-label="Bar chart" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+              <BarChart3 className="w-4 h-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+        </div>
       </CardHeader>
       <CardContent className="pt-4">
         <div className="h-[300px]">
@@ -94,41 +106,76 @@ export function TrendPanel() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="date" 
-                  className="text-xs"
-                  tick={{ fill: 'currentColor', fontSize: 11 }}
-                />
-                <YAxis 
-                  className="text-xs"
-                  tick={{ fill: 'currentColor', fontSize: 11 }}
-                  domain={[-100, 100]}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))'
-                  }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="nps" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="responses" 
-                  stroke="hsl(var(--muted-foreground))" 
-                  strokeWidth={1}
-                  strokeDasharray="5 5"
-                  dot={false}
-                />
-              </LineChart>
+              {chartType === "line" ? (
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="date" 
+                    className="text-xs"
+                    tick={{ fill: 'currentColor', fontSize: 11 }}
+                  />
+                  <YAxis 
+                    className="text-xs"
+                    tick={{ fill: 'currentColor', fontSize: 11 }}
+                    domain={[-100, 100]}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))'
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="nps" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="responses" 
+                    stroke="hsl(var(--muted-foreground))" 
+                    strokeWidth={1}
+                    strokeDasharray="5 5"
+                    dot={false}
+                  />
+                </LineChart>
+              ) : (
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="date" 
+                    className="text-xs"
+                    tick={{ fill: 'currentColor', fontSize: 11 }}
+                  />
+                  <YAxis 
+                    className="text-xs"
+                    tick={{ fill: 'currentColor', fontSize: 11 }}
+                    domain={[-100, 100]}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))'
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Legend />
+                  <Bar 
+                    dataKey="nps" 
+                    fill="hsl(var(--primary))" 
+                    name="NPS Score"
+                  />
+                  <Bar 
+                    dataKey="responses" 
+                    fill="hsl(var(--muted-foreground))" 
+                    name="Responses"
+                    opacity={0.6}
+                  />
+                </BarChart>
+              )}
             </ResponsiveContainer>
           )}
         </div>
