@@ -29,6 +29,7 @@ export function KpiStrip() {
   // Calculate KPI data based on aggregates from DataContext
   const kpiData = useMemo(() => {
     if (!aggregates || isLoading) {
+      // Loading placeholders for the four KPIs
       return [
         {
           label: "Overall NPS",
@@ -70,8 +71,9 @@ export function KpiStrip() {
       filteredData.map(d => d.storeCode || d['Store Code'] || d['Store No'] || 'Unknown')
     ).size;
 
-    // Use aggregates from DataContext for NPS calculation
+    // Use aggregates from DataContext
     const nps = aggregates.npsScore || 0;
+    const roundedNps = Math.round(nps);
     const totalResponses = aggregates.totalResponses || 0;
     const avgScore = aggregates.averageScore || 0;
     
@@ -81,10 +83,11 @@ export function KpiStrip() {
     const storeChange = 0;
     const avgChange = 0;
 
+    // Return four KPIs including Overall NPS
     return [
       {
         label: "Overall NPS",
-        value: `${nps >= 0 ? '+' : ''}${nps}`,
+        value: `${roundedNps >= 0 ? '+' : ''}${roundedNps}`,
         change: `${npsChange >= 0 ? '+' : ''}${npsChange}`,
         trend: npsChange > 0 ? "up" as const : npsChange < 0 ? "down" as const : "neutral" as const,
         icon: TrendingUp,
@@ -133,7 +136,7 @@ export function KpiStrip() {
             <Wifi className="w-4 h-4 text-green-500" />
             <span className="text-sm font-medium">Real-time data sync active</span>
             <Badge variant="outline" className="text-xs">
-              Every {config.refreshInterval / 1000}s
+              Every {config.refreshInterval}s
             </Badge>
           </div>
           <Button
@@ -179,21 +182,6 @@ export function KpiStrip() {
                 <div className={`p-3 rounded-lg bg-${kpi.color}/10 border border-${kpi.color}/20`}>
                   <kpi.icon className={`w-6 h-6 text-${kpi.color}`} />
                 </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-sm">
-                {kpi.trend === "up" ? (
-                  <TrendingUp className="w-4 h-4 text-nps-promoter" />
-                ) : kpi.trend === "down" ? (
-                  <TrendingDown className="w-4 h-4 text-destructive" />
-                ) : (
-                  <span className="w-4 h-4" />
-                )}
-                <span className="text-muted-foreground">vs last period</span>
-                {config.autoRefreshEnabled && (
-                  <Badge variant="outline" className="ml-auto text-xs">
-                    Live
-                  </Badge>
-                )}
               </div>
             </CardContent>
           </Card>

@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Building2, MapPin, TrendingUp, TrendingDown } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
+import { StoreDetailView } from "@/components/StoreDetailView";
 
 interface StoreTableProps {
   userRole?: 'admin' | 'user' | 'store_manager';
@@ -12,6 +13,7 @@ interface StoreTableProps {
 export function StoreTable({ userRole }: StoreTableProps) {
   // Use DataContext for data
   const { filteredData, isLoading } = useData();
+  const [selectedStoreCode, setSelectedStoreCode] = useState<string | null>(null);
 
   // Calculate store metrics from filtered data
   const storeMetrics = useMemo(() => {
@@ -100,67 +102,79 @@ export function StoreTable({ userRole }: StoreTableProps) {
   }
 
   return (
-    <Card className="bg-gradient-chart hover:shadow-xl transition-all duration-300">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building2 className="w-5 h-5 text-primary" />
-          Top Performing Stores
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {storeMetrics.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No store data available
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {storeMetrics.map((store, index) => (
-              <div 
-                key={store.storeCode}
-                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-1">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">
-                      {index + 1}
+    <>
+      <Card className="bg-gradient-chart hover:shadow-xl transition-all duration-300">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-primary" />
+            Top Performing Stores
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {storeMetrics.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No store data available
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {storeMetrics.map((store, index) => (
+                <div 
+                  key={store.storeCode}
+                  className="p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-medium">{store.storeName}</div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          {store.city}, {store.state}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="flex items-center gap-1 justify-end">
+                        <span className="text-xl font-bold">
+                          {store.nps >= 0 ? '+' : ''}{store.nps}
+                        </span>
+                        {store.trend === 'up' ? (
+                          <TrendingUp className="w-4 h-4 text-green-500" />
+                        ) : store.trend === 'down' ? (
+                          <TrendingDown className="w-4 h-4 text-red-500" />
+                        ) : null}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {store.responses} responses
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div className="font-medium">{store.storeName}</div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="w-3 h-3" />
-                      {store.city}, {store.state}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xl font-bold">
-                        {store.nps >= 0 ? '+' : ''}{store.nps}
-                      </span>
-                      {store.trend === 'up' ? (
-                        <TrendingUp className="w-4 h-4 text-green-500" />
-                      ) : store.trend === 'down' ? (
-                        <TrendingDown className="w-4 h-4 text-red-500" />
-                      ) : null}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {store.responses} responses
-                    </div>
-                  </div>
+
                   {userRole === 'admin' && (
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" className="w-full mt-3" onClick={() => setSelectedStoreCode(store.storeCode)}>
                       View
                     </Button>
                   )}
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {selectedStoreCode && (
+        <StoreDetailView
+          storeCode={selectedStoreCode}
+          open={!!selectedStoreCode}
+          onClose={() => setSelectedStoreCode(null)}
+          data={filteredData}
+        />
+      )}
+    </>
   );
 }

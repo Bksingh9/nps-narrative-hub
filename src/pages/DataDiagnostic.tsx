@@ -81,34 +81,6 @@ export default function DataDiagnostic() {
     window.location.reload();
   };
 
-  const loadSampleData = async () => {
-    try {
-      const response = await fetch('/real-nps-data.csv');
-      const text = await response.text();
-      
-      // Create a file from the text
-      const file = new File([text], 'real-nps-data.csv', { type: 'text/csv' });
-      
-      // Upload to backend
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const uploadResponse = await fetch('http://localhost:3001/api/crawler/csv/upload-realtime', {
-        method: 'POST',
-        body: formData
-      });
-      
-      const result = await uploadResponse.json();
-      
-      if (result.success) {
-        console.log('Sample data loaded successfully');
-        await forceRefresh();
-      }
-    } catch (error) {
-      console.error('Failed to load sample data:', error);
-    }
-  };
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -163,15 +135,6 @@ export default function DataDiagnostic() {
                 </div>
               </div>
             )}
-            
-            <Button 
-              size="sm" 
-              className="w-full"
-              onClick={loadSampleData}
-              disabled={backendStatus !== 'connected'}
-            >
-              Load Sample Data
-            </Button>
           </CardContent>
         </Card>
 

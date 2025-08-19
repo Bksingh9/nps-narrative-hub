@@ -136,9 +136,20 @@ export function GlobalFilterBar() {
           </div>
           <div className="flex items-center gap-2">
             {aggregates && (
-              <Badge variant="outline">
-                {filteredData.length} of {aggregates.totalResponses} Records
-              </Badge>
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-muted-foreground">
+                  NPS Score: <Badge variant="outline">{aggregates.npsScore}</Badge>
+                </span>
+                <span className="text-muted-foreground">
+                  Promoters: <Badge variant="outline" className="text-green-600">{aggregates.promoterPercent}%</Badge>
+                </span>
+                <span className="text-muted-foreground">
+                  Passives: <Badge variant="outline" className="text-amber-600">{aggregates.passivePercent}%</Badge>
+                </span>
+                <span className="text-muted-foreground">
+                  Detractors: <Badge variant="outline" className="text-red-600">{aggregates.detractorPercent}%</Badge>
+                </span>
+              </div>
             )}
             <Button
               size="sm"

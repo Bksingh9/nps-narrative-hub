@@ -7,10 +7,8 @@ export function initializeApp() {
   // Initialize default API key if not already set
   const savedApiKey = localStorage.getItem('openai_api_key');
   if (!savedApiKey) {
-    // Set the default API key for demo purposes
-    const defaultApiKey = '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';
-    localStorage.setItem('openai_api_key', defaultApiKey);
-    console.log('Initialized with default API key');
+    // Do not seed a demo API key. Prompt user to configure one in Settings instead.
+    console.warn('No OpenAI API key found. Set it in Settings to enable AI features.');
   }
 
   // Initialize system configuration
@@ -42,7 +40,7 @@ export function initializeApp() {
     console.log('Initialized system configuration');
   }
 
-  // Initialize sample data if none exists
+  // Initialize sample data notice
   const existingData = localStorage.getItem('nps-records');
   if (!existingData || JSON.parse(existingData).length === 0) {
     console.log('No NPS data found. Please upload CSV data to get started.');
