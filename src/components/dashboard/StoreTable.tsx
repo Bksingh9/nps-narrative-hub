@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Building2, MapPin, TrendingUp, TrendingDown } from "lucide-react";
-import { useData } from "@/contexts/DataContext";
-import { StoreDetailView } from "@/components/StoreDetailView";
+import { useMemo, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Building2, MapPin, TrendingUp, TrendingDown } from 'lucide-react';
+import { useData } from '@/contexts/DataContext';
+import { StoreDetailView } from '@/components/StoreDetailView';
 
 interface StoreTableProps {
   userRole?: 'admin' | 'user' | 'store_manager';
@@ -13,7 +13,9 @@ interface StoreTableProps {
 export function StoreTable({ userRole }: StoreTableProps) {
   // Use DataContext for data
   const { filteredData, isLoading } = useData();
-  const [selectedStoreCode, setSelectedStoreCode] = useState<string | null>(null);
+  const [selectedStoreCode, setSelectedStoreCode] = useState<string | null>(
+    null
+  );
 
   // Calculate store metrics from filtered data
   const storeMetrics = useMemo(() => {
@@ -22,38 +24,53 @@ export function StoreTable({ userRole }: StoreTableProps) {
     }
 
     // Group data by store
-    const storeMap = new Map<string, {
-      storeName: string;
-      state: string;
-      city: string;
-      scores: number[];
-      responses: number;
-    }>();
+    const storeMap = new Map<
+      string,
+      {
+        storeName: string;
+        state: string;
+        city: string;
+        scores: number[];
+        responses: number;
+      }
+    >();
 
     filteredData.forEach(record => {
-      const storeCode = record.storeCode || record['Store Code'] || record['Store No'] || 'Unknown';
-      const storeName = record.storeName || record['Store Name'] || record['Description'] || storeCode;
+      const storeCode =
+        record.storeCode ||
+        record['Store Code'] ||
+        record['Store No'] ||
+        'Unknown';
+      const storeName =
+        record.storeName ||
+        record['Store Name'] ||
+        record['Description'] ||
+        storeCode;
       const state = record.state || record['State'] || 'Unknown';
       const city = record.city || record['City'] || 'Unknown';
-      
+
       if (!storeMap.has(storeCode)) {
         storeMap.set(storeCode, {
           storeName,
           state,
           city,
           scores: [],
-          responses: 0
+          responses: 0,
         });
       }
-      
+
       const store = storeMap.get(storeCode);
       if (!store) return;
-      
-      const score = record.npsScore || 
-                   record['NPS Score'] || 
-                   record['On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'];
-      
-      const numScore = typeof score === 'number' ? score : parseFloat(score || '0');
+
+      const score =
+        record.npsScore ||
+        record['NPS Score'] ||
+        record[
+          'On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'
+        ];
+
+      const numScore =
+        typeof score === 'number' ? score : parseFloat(score || '0');
       if (!isNaN(numScore)) {
         store.scores.push(numScore);
         store.responses++;
@@ -64,10 +81,11 @@ export function StoreTable({ userRole }: StoreTableProps) {
     const stores = Array.from(storeMap.entries()).map(([storeCode, data]) => {
       const promoters = data.scores.filter(s => s >= 9).length;
       const detractors = data.scores.filter(s => s <= 6).length;
-      const nps = data.scores.length > 0
-        ? Math.round(((promoters - detractors) / data.scores.length) * 100)
-        : 0;
-      
+      const nps =
+        data.scores.length > 0
+          ? Math.round(((promoters - detractors) / data.scores.length) * 100)
+          : 0;
+
       return {
         storeCode,
         storeName: data.storeName,
@@ -75,7 +93,12 @@ export function StoreTable({ userRole }: StoreTableProps) {
         city: data.city,
         nps,
         responses: data.responses,
-        trend: nps > 0 ? 'up' as const : nps < 0 ? 'down' as const : 'neutral' as const
+        trend:
+          nps > 0
+            ? ('up' as const)
+            : nps < 0
+              ? ('down' as const)
+              : ('neutral' as const),
       };
     });
 
@@ -103,7 +126,7 @@ export function StoreTable({ userRole }: StoreTableProps) {
 
   return (
     <>
-      <Card className="bg-gradient-chart hover:shadow-xl transition-all duration-300">
+      <Card className="bg-card border transition-all duration-300">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-primary" />
@@ -118,7 +141,7 @@ export function StoreTable({ userRole }: StoreTableProps) {
           ) : (
             <div className="space-y-3">
               {storeMetrics.map((store, index) => (
-                <div 
+                <div
                   key={store.storeCode}
                   className="p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
                 >
@@ -141,7 +164,8 @@ export function StoreTable({ userRole }: StoreTableProps) {
                     <div className="text-right">
                       <div className="flex items-center gap-1 justify-end">
                         <span className="text-xl font-bold">
-                          {store.nps >= 0 ? '+' : ''}{store.nps}
+                          {store.nps >= 0 ? '+' : ''}
+                          {store.nps}
                         </span>
                         {store.trend === 'up' ? (
                           <TrendingUp className="w-4 h-4 text-green-500" />
@@ -156,7 +180,12 @@ export function StoreTable({ userRole }: StoreTableProps) {
                   </div>
 
                   {userRole === 'admin' && (
-                    <Button size="sm" variant="outline" className="w-full mt-3" onClick={() => setSelectedStoreCode(store.storeCode)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-3"
+                      onClick={() => setSelectedStoreCode(store.storeCode)}
+                    >
                       View
                     </Button>
                   )}

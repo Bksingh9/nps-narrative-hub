@@ -1,7 +1,19 @@
 import { useState, useCallback } from 'react';
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  Upload,
+  FileText,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -9,19 +21,24 @@ import { useNavigate } from 'react-router-dom';
 export default function CSVUploader() {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [uploadStatus, setUploadStatus] = useState<
+    'idle' | 'success' | 'error'
+  >('idle');
   const [dataInfo, setDataInfo] = useState<any>(null);
   const navigate = useNavigate();
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile && selectedFile.type === 'text/csv') {
-      setFile(selectedFile);
-      setUploadStatus('idle');
-    } else {
-      toast.error('Please select a valid CSV file');
-    }
-  }, []);
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = e.target.files?.[0];
+      if (selectedFile && selectedFile.type === 'text/csv') {
+        setFile(selectedFile);
+        setUploadStatus('idle');
+      } else {
+        toast.error('Please select a valid CSV file');
+      }
+    },
+    []
+  );
 
   const handleUpload = async () => {
     if (!file) {
@@ -36,10 +53,13 @@ export default function CSVUploader() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:3001/api/crawler/csv/upload-realtime', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        'http://localhost:3001/api/crawler/csv/upload-realtime',
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       const result = await response.json();
 
@@ -49,18 +69,20 @@ export default function CSVUploader() {
           totalRecords: result.totalRecords,
           aggregates: result.aggregates,
           headers: result.headers,
-          dateRange: result.dateRange
+          dateRange: result.dateRange,
         });
-        
+
         toast.success(`Successfully loaded ${result.totalRecords} records!`);
-        
+
         // Dispatch event to update dashboard
-        window.dispatchEvent(new CustomEvent('nps-data-updated', { 
-          detail: { 
-            records: result.totalRecords,
-            aggregates: result.aggregates 
-          } 
-        }));
+        window.dispatchEvent(
+          new CustomEvent('nps-data-updated', {
+            detail: {
+              records: result.totalRecords,
+              aggregates: result.aggregates,
+            },
+          })
+        );
 
         // Navigate to dashboard after 2 seconds
         setTimeout(() => {
@@ -72,7 +94,9 @@ export default function CSVUploader() {
       }
     } catch (error) {
       setUploadStatus('error');
-      toast.error('Failed to connect to server. Please ensure backend is running.');
+      toast.error(
+        'Failed to connect to server. Please ensure backend is running.'
+      );
       console.error('Upload error:', error);
     } finally {
       setIsUploading(false);
@@ -87,7 +111,7 @@ export default function CSVUploader() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile && droppedFile.type === 'text/csv') {
       setFile(droppedFile);
@@ -103,14 +127,18 @@ export default function CSVUploader() {
         <CardHeader>
           <CardTitle className="text-2xl">Upload NPS Data CSV</CardTitle>
           <CardDescription>
-            Upload your CSV file containing NPS survey responses. The system will automatically detect columns for Response Date, State, Store Code, and NPS scores.
+            Upload your CSV file containing NPS survey responses. The system
+            will automatically detect columns for Response Date, State, Store
+            Code, and NPS scores.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Drop Zone */}
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              file ? 'border-green-500 bg-green-50' : 'border-gray-300 hover:border-gray-400'
+              file
+                ? 'border-green-500 bg-green-50'
+                : 'border-gray-300 hover:border-gray-400'
             }`}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
@@ -137,7 +165,9 @@ export default function CSVUploader() {
             ) : (
               <div className="space-y-2">
                 <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="text-lg font-medium">Drag & Drop your CSV file here</p>
+                <p className="text-lg font-medium">
+                  Drag & Drop your CSV file here
+                </p>
                 <p className="text-sm text-gray-500">
                   Or click to select a file
                 </p>
@@ -174,7 +204,7 @@ export default function CSVUploader() {
             )}
           </Button>
 
-                     {/* Status Messages */}
+          {/* Status Messages */}
           {uploadStatus === 'success' && dataInfo && (
             <div className="space-y-3">
               <Alert className="border-green-500 bg-green-50">
@@ -183,11 +213,13 @@ export default function CSVUploader() {
                   CSV uploaded successfully! Redirecting to dashboard...
                 </AlertDescription>
               </Alert>
-              
+
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="bg-blue-50 p-3 rounded-lg">
                   <p className="text-blue-600 font-medium">Total Records</p>
-                  <p className="text-2xl font-bold text-blue-900">{dataInfo.totalRecords}</p>
+                  <p className="text-2xl font-bold text-blue-900">
+                    {dataInfo.totalRecords}
+                  </p>
                 </div>
                 <div className="bg-purple-50 p-3 rounded-lg">
                   <p className="text-purple-600 font-medium">NPS Score</p>
@@ -210,4 +242,4 @@ export default function CSVUploader() {
       </Card>
     </div>
   );
-} 
+}

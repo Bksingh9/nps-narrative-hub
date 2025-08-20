@@ -30,7 +30,7 @@ const initialFilters: FilterState = {
   selectedStore: '',
   selectedState: '',
   selectedRegion: '',
-  selectedCity: ''
+  selectedCity: '',
 };
 
 export function FilterProvider({ children }: { children: ReactNode }) {
@@ -43,7 +43,9 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         ...initialFilters,
         ...parsed,
         dateRange: {
-          from: parsed?.dateRange?.from ? new Date(parsed.dateRange.from) : undefined,
+          from: parsed?.dateRange?.from
+            ? new Date(parsed.dateRange.from)
+            : undefined,
           to: parsed?.dateRange?.to ? new Date(parsed.dateRange.to) : undefined,
         },
       } as FilterState;
@@ -80,8 +82,12 @@ export function FilterProvider({ children }: { children: ReactNode }) {
     const toSave = {
       ...filters,
       dateRange: {
-        from: filters.dateRange.from ? filters.dateRange.from.toISOString() : undefined,
-        to: filters.dateRange.to ? filters.dateRange.to.toISOString() : undefined,
+        from: filters.dateRange.from
+          ? filters.dateRange.from.toISOString()
+          : undefined,
+        to: filters.dateRange.to
+          ? filters.dateRange.to.toISOString()
+          : undefined,
       },
     };
     localStorage.setItem('nps-filters', JSON.stringify(toSave));
@@ -96,7 +102,7 @@ export function FilterProvider({ children }: { children: ReactNode }) {
         updateState,
         updateRegion,
         updateCity,
-        resetFilters
+        resetFilters,
       }}
     >
       {children}

@@ -17,7 +17,7 @@ export async function testCSVParse() {
     header: true,
     skipEmptyLines: true,
     dynamicTyping: false, // Keep everything as strings initially
-    transformHeader: (header) => header // Don't transform headers - keep exact
+    transformHeader: header => header, // Don't transform headers - keep exact
   });
 
   console.log('Parsed columns:', Object.keys(result.data[0]));
@@ -27,7 +27,7 @@ export async function testCSVParse() {
   const processedData = result.data.map((row: any) => {
     // Create a clean copy with exact column names preserved
     const processedRow: any = {};
-    
+
     // Copy all fields exactly as they are
     Object.keys(row).forEach(key => {
       processedRow[key] = row[key];
@@ -46,7 +46,7 @@ export async function testCSVParse() {
       customerName: row['Customer Name'] || '',
       email: row['Email'] || '',
       phone: row['Phone'] || '',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     return processedRow;
@@ -59,22 +59,26 @@ export function loadExactCSVData() {
   testCSVParse().then(data => {
     console.log('Loading exact CSV data:', data.length, 'records');
     console.log('Sample record:', data[0]);
-    
+
     // Save to localStorage
     localStorage.setItem('nps-records', JSON.stringify(data));
-    
+
     // Dispatch events
-    window.dispatchEvent(new CustomEvent('nps-data-updated', { 
-      detail: { records: data.length } 
-    }));
-    
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'nps-records',
-      newValue: JSON.stringify(data),
-      url: window.location.href
-    }));
-    
+    window.dispatchEvent(
+      new CustomEvent('nps-data-updated', {
+        detail: { records: data.length },
+      })
+    );
+
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: 'nps-records',
+        newValue: JSON.stringify(data),
+        url: window.location.href,
+      })
+    );
+
     console.log('Data loaded successfully!');
     return data;
   });
-} 
+}

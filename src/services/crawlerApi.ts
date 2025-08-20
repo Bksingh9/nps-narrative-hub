@@ -67,7 +67,7 @@ class CrawlerAPI {
   // Get available templates
   async getTemplates(): Promise<{ templates: CrawlTemplate[]; total: number }> {
     const response = await fetch(`${API_BASE_URL}/templates`);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch templates: ${response.statusText}`);
     }
@@ -95,7 +95,7 @@ class CrawlerAPI {
   // Get job status
   async getJobStatus(jobId: string): Promise<JobStatus> {
     const response = await fetch(`${API_BASE_URL}/job/${jobId}`);
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch job status: ${response.statusText}`);
     }
@@ -104,10 +104,14 @@ class CrawlerAPI {
   }
 
   // Poll job until complete
-  async pollJobStatus(jobId: string, maxAttempts = 30, delayMs = 2000): Promise<JobStatus> {
+  async pollJobStatus(
+    jobId: string,
+    maxAttempts = 30,
+    delayMs = 2000
+  ): Promise<JobStatus> {
     for (let i = 0; i < maxAttempts; i++) {
       const status = await this.getJobStatus(jobId);
-      
+
       if (status.status === 'completed' || status.status === 'failed') {
         return status;
       }
@@ -125,8 +129,10 @@ class CrawlerAPI {
     }
 
     // Get existing records
-    const existingRecords = JSON.parse(localStorage.getItem('nps-records') || '[]');
-    
+    const existingRecords = JSON.parse(
+      localStorage.getItem('nps-records') || '[]'
+    );
+
     // Add crawled data with normalized format
     const normalizedData = npsData.map(record => ({
       ...record,
@@ -136,24 +142,29 @@ class CrawlerAPI {
         state: record['State'],
         region: record['Region'],
         city: record['City'],
-        nps: typeof record['NPS Score'] === 'number' ? record['NPS Score'] : parseInt(record['NPS Score'] || '5'),
+        nps:
+          typeof record['NPS Score'] === 'number'
+            ? record['NPS Score']
+            : parseInt(record['NPS Score'] || '5'),
         responseDate: record['Response Date'],
         comments: record['Comments'],
         category: record['Category'] || 'Web Crawled',
         sourceUrl: record['Source URL'],
         crawledAt: record['Crawled At'],
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     }));
 
     // Combine and save
     const allRecords = [...existingRecords, ...normalizedData];
     localStorage.setItem('nps-records', JSON.stringify(allRecords));
-    
+
     // Dispatch event to update UI
-    window.dispatchEvent(new CustomEvent('nps-data-updated', { 
-      detail: { records: allRecords.length } 
-    }));
+    window.dispatchEvent(
+      new CustomEvent('nps-data-updated', {
+        detail: { records: allRecords.length },
+      })
+    );
   }
 
   // Check if backend is running
@@ -221,4 +232,4 @@ class CrawlerAPI {
   }
 }
 
-export default new CrawlerAPI(); 
+export default new CrawlerAPI();

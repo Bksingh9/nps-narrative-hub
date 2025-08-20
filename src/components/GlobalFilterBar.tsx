@@ -13,22 +13,20 @@ import {
 } from '@/components/ui/select';
 import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { 
-  Filter, 
-  X, 
-  Search, 
-  RefreshCw,
-  Download 
-} from 'lucide-react';
+import { Filter, X, Search, RefreshCw, Download } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useData } from '@/contexts/DataContext';
 
 export function GlobalFilterBar() {
-  const { 
+  const {
     filters: activeFilters,
     filterOptions,
     applyFilters,
@@ -36,7 +34,7 @@ export function GlobalFilterBar() {
     refreshData,
     isLoading,
     filteredData,
-    aggregates
+    aggregates,
   } = useData();
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -49,7 +47,7 @@ export function GlobalFilterBar() {
     format: activeFilters.format || 'all',
     subFormat: activeFilters.subFormat || 'all',
     npsCategory: activeFilters.npsCategory || 'all',
-    searchText: activeFilters.searchText || ''
+    searchText: activeFilters.searchText || '',
   });
 
   // Sync with active filters from context
@@ -63,20 +61,22 @@ export function GlobalFilterBar() {
       format: activeFilters.format || 'all',
       subFormat: activeFilters.subFormat || 'all',
       npsCategory: activeFilters.npsCategory || 'all',
-      searchText: activeFilters.searchText || ''
+      searchText: activeFilters.searchText || '',
     });
-    
+
     if (activeFilters.dateFrom || activeFilters.dateTo) {
       setDateRange({
-        from: activeFilters.dateFrom ? new Date(activeFilters.dateFrom) : undefined,
-        to: activeFilters.dateTo ? new Date(activeFilters.dateTo) : undefined
+        from: activeFilters.dateFrom
+          ? new Date(activeFilters.dateFrom)
+          : undefined,
+        to: activeFilters.dateTo ? new Date(activeFilters.dateTo) : undefined,
       });
     }
   }, [activeFilters]);
 
   const handleApplyFilters = async () => {
     const newFilters: any = {};
-    
+
     // Add date filters
     if (dateRange?.from) {
       newFilters.dateFrom = format(dateRange.from, 'yyyy-MM-dd');
@@ -84,7 +84,7 @@ export function GlobalFilterBar() {
     if (dateRange?.to) {
       newFilters.dateTo = format(dateRange.to, 'yyyy-MM-dd');
     }
-    
+
     // Add other filters
     Object.keys(filters).forEach(key => {
       const value = filters[key as keyof typeof filters];
@@ -92,7 +92,7 @@ export function GlobalFilterBar() {
         newFilters[key] = value;
       }
     });
-    
+
     await applyFilters(newFilters);
   };
 
@@ -107,7 +107,7 @@ export function GlobalFilterBar() {
       format: 'all',
       subFormat: 'all',
       npsCategory: 'all',
-      searchText: ''
+      searchText: '',
     });
     clearFilters();
   };
@@ -122,32 +122,40 @@ export function GlobalFilterBar() {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-blue-50/50 to-purple-50/50 dark:from-blue-900/10 dark:to-purple-900/10">
+    <Card className="bg-card border">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Filter className="h-5 w-5 text-muted-foreground" />
             <h3 className="font-medium">Global Filters</h3>
             {getActiveFilterCount() > 0 && (
-              <Badge variant="secondary">
-                {getActiveFilterCount()} Active
-              </Badge>
+              <Badge variant="secondary">{getActiveFilterCount()} Active</Badge>
             )}
           </div>
           <div className="flex items-center gap-2">
             {aggregates && (
               <div className="flex items-center gap-4 text-sm">
                 <span className="text-muted-foreground">
-                  NPS Score: <Badge variant="outline">{aggregates.npsScore}</Badge>
+                  NPS Score:{' '}
+                  <Badge variant="outline">{aggregates.npsScore}</Badge>
                 </span>
                 <span className="text-muted-foreground">
-                  Promoters: <Badge variant="outline" className="text-green-600">{aggregates.promoterPercent}%</Badge>
+                  Promoters:{' '}
+                  <Badge variant="outline" className="text-green-600">
+                    {aggregates.promoterPercent}%
+                  </Badge>
                 </span>
                 <span className="text-muted-foreground">
-                  Passives: <Badge variant="outline" className="text-amber-600">{aggregates.passivePercent}%</Badge>
+                  Passives:{' '}
+                  <Badge variant="outline" className="text-amber-600">
+                    {aggregates.passivePercent}%
+                  </Badge>
                 </span>
                 <span className="text-muted-foreground">
-                  Detractors: <Badge variant="outline" className="text-red-600">{aggregates.detractorPercent}%</Badge>
+                  Detractors:{' '}
+                  <Badge variant="outline" className="text-red-600">
+                    {aggregates.detractorPercent}%
+                  </Badge>
                 </span>
               </div>
             )}
@@ -157,14 +165,12 @@ export function GlobalFilterBar() {
               onClick={refreshData}
               disabled={isLoading}
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
             </Button>
             {getActiveFilterCount() > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleClearFilters}
-              >
+              <Button size="sm" variant="ghost" onClick={handleClearFilters}>
                 <X className="h-4 w-4 mr-1" />
                 Clear
               </Button>
@@ -182,42 +188,46 @@ export function GlobalFilterBar() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "justify-start text-left font-normal flex-1",
-                      !dateRange?.from && "text-muted-foreground"
+                      'justify-start text-left font-normal flex-1',
+                      !dateRange?.from && 'text-muted-foreground'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? format(dateRange.from, "PPP") : "From date"}
+                    {dateRange?.from
+                      ? format(dateRange.from, 'PPP')
+                      : 'From date'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
                     selected={dateRange?.from}
-                    onSelect={(date) => setDateRange({ ...dateRange, from: date })}
+                    onSelect={date =>
+                      setDateRange({ ...dateRange, from: date })
+                    }
                     initialFocus
                   />
                 </PopoverContent>
               </Popover>
-              
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "justify-start text-left font-normal flex-1",
-                      !dateRange?.to && "text-muted-foreground"
+                      'justify-start text-left font-normal flex-1',
+                      !dateRange?.to && 'text-muted-foreground'
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange?.to ? format(dateRange.to, "PPP") : "To date"}
+                    {dateRange?.to ? format(dateRange.to, 'PPP') : 'To date'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
                     selected={dateRange?.to}
-                    onSelect={(date) => setDateRange({ ...dateRange, to: date })}
+                    onSelect={date => setDateRange({ ...dateRange, to: date })}
                     initialFocus
                   />
                 </PopoverContent>
@@ -230,7 +240,7 @@ export function GlobalFilterBar() {
             <Label htmlFor="state">State</Label>
             <Select
               value={filters.state}
-              onValueChange={(value) => setFilters({ ...filters, state: value })}
+              onValueChange={value => setFilters({ ...filters, state: value })}
             >
               <SelectTrigger id="state">
                 <SelectValue placeholder="All States" />
@@ -251,7 +261,7 @@ export function GlobalFilterBar() {
             <Label htmlFor="city">City</Label>
             <Select
               value={filters.city}
-              onValueChange={(value) => setFilters({ ...filters, city: value })}
+              onValueChange={value => setFilters({ ...filters, city: value })}
             >
               <SelectTrigger id="city">
                 <SelectValue placeholder="All Cities" />
@@ -272,7 +282,9 @@ export function GlobalFilterBar() {
             <Label htmlFor="store">Store</Label>
             <Select
               value={filters.storeCode}
-              onValueChange={(value) => setFilters({ ...filters, storeCode: value })}
+              onValueChange={value =>
+                setFilters({ ...filters, storeCode: value })
+              }
             >
               <SelectTrigger id="store">
                 <SelectValue placeholder="All Stores" />
@@ -293,7 +305,7 @@ export function GlobalFilterBar() {
             <Label htmlFor="region">Region</Label>
             <Select
               value={filters.region}
-              onValueChange={(value) => setFilters({ ...filters, region: value })}
+              onValueChange={value => setFilters({ ...filters, region: value })}
             >
               <SelectTrigger id="region">
                 <SelectValue placeholder="All Regions" />
@@ -314,7 +326,9 @@ export function GlobalFilterBar() {
             <Label htmlFor="nps-category">NPS Category</Label>
             <Select
               value={filters.npsCategory}
-              onValueChange={(value) => setFilters({ ...filters, npsCategory: value })}
+              onValueChange={value =>
+                setFilters({ ...filters, npsCategory: value })
+              }
             >
               <SelectTrigger id="nps-category">
                 <SelectValue placeholder="All Categories" />
@@ -338,7 +352,9 @@ export function GlobalFilterBar() {
                 type="text"
                 placeholder="Search..."
                 value={filters.searchText}
-                onChange={(e) => setFilters({ ...filters, searchText: e.target.value })}
+                onChange={e =>
+                  setFilters({ ...filters, searchText: e.target.value })
+                }
                 className="pl-8"
               />
             </div>
@@ -371,22 +387,29 @@ export function GlobalFilterBar() {
           <div className="mt-4 pt-4 border-t flex items-center justify-between">
             <div className="flex items-center gap-4 text-sm">
               <span className="text-muted-foreground">
-                NPS Score: <Badge variant="outline">{aggregates.npsScore}</Badge>
+                NPS Score:{' '}
+                <Badge variant="outline">{aggregates.npsScore}</Badge>
               </span>
               <span className="text-muted-foreground">
-                Promoters: <Badge variant="outline" className="text-green-600">{aggregates.promoterPercent}%</Badge>
+                Promoters:{' '}
+                <Badge variant="outline" className="text-green-600">
+                  {aggregates.promoterPercent}%
+                </Badge>
               </span>
               <span className="text-muted-foreground">
-                Detractors: <Badge variant="outline" className="text-red-600">{aggregates.detractorPercent}%</Badge>
+                Detractors:{' '}
+                <Badge variant="outline" className="text-red-600">
+                  {aggregates.detractorPercent}%
+                </Badge>
               </span>
             </div>
             <div className="text-sm text-muted-foreground">
-              {filteredData.length.toLocaleString()} records • 
-              Last updated: {new Date().toLocaleTimeString()}
+              {filteredData.length.toLocaleString()} records • Last updated:{' '}
+              {new Date().toLocaleTimeString()}
             </div>
           </div>
         )}
       </CardContent>
     </Card>
   );
-} 
+}

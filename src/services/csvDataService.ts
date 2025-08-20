@@ -74,12 +74,12 @@ class CSVDataService {
       }
 
       const result = await response.json();
-      
+
       // Store data locally for quick access
       if (result.success) {
         this.metadata = result.metadata;
         this.lastUpdated = new Date().toISOString();
-        
+
         // Also save to localStorage for persistence
         this.saveToLocalStorage(result);
       }
@@ -108,7 +108,7 @@ class CSVDataService {
       }
 
       const result = await response.json();
-      
+
       // Cache filtered data
       if (result.success) {
         this.currentData = result.data;
@@ -168,7 +168,7 @@ class CSVDataService {
       this.currentData = [];
       this.metadata = {};
       this.lastUpdated = null;
-      
+
       // Clear localStorage
       localStorage.removeItem('csv-realtime-data');
     } catch (error) {
@@ -184,16 +184,18 @@ class CSVDataService {
       lastUpdated: this.lastUpdated,
       uploadedAt: new Date().toISOString(),
     };
-    
+
     localStorage.setItem('csv-realtime-data', JSON.stringify(storageData));
-    
+
     // Dispatch event for UI updates
-    window.dispatchEvent(new CustomEvent('csv-data-uploaded', { 
-      detail: { 
-        totalRecords: data.metadata?.totalRecords || 0,
-        metadata: data.metadata 
-      } 
-    }));
+    window.dispatchEvent(
+      new CustomEvent('csv-data-uploaded', {
+        detail: {
+          totalRecords: data.metadata?.totalRecords || 0,
+          metadata: data.metadata,
+        },
+      })
+    );
   }
 
   // Load metadata from localStorage
@@ -238,7 +240,7 @@ class CSVDataService {
     const passives = data.filter(d => d.npsScore >= 7 && d.npsScore < 9).length;
     const detractors = data.filter(d => d.npsScore < 7).length;
     const total = data.length;
-    
+
     const score = total > 0 ? ((promoters - detractors) / total) * 100 : 0;
 
     return {
@@ -246,7 +248,7 @@ class CSVDataService {
       promoters,
       passives,
       detractors,
-      total
+      total,
     };
   }
 
@@ -255,11 +257,11 @@ class CSVDataService {
     if (!data || data.length === 0) return [];
 
     const grouped = new Map<string, any[]>();
-    
+
     data.forEach(record => {
       const date = new Date(record.responseDate);
       let key: string;
-      
+
       if (groupBy === 'day') {
         key = date.toISOString().split('T')[0];
       } else if (groupBy === 'week') {
@@ -269,7 +271,7 @@ class CSVDataService {
       } else {
         key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
       }
-      
+
       if (!grouped.has(key)) {
         grouped.set(key, []);
       }
@@ -285,7 +287,7 @@ class CSVDataService {
         responses: records.length,
         promoters: metrics.promoters,
         passives: metrics.passives,
-        detractors: metrics.detractors
+        detractors: metrics.detractors,
       };
     });
 
@@ -300,10 +302,17 @@ class CSVDataService {
 
     // Prepare CSV content
     const headers = [
-      'Store Code', 'Store Name', 'State', 'Region', 'City',
-      'NPS Score', 'NPS Category', 'Response Date', 'Comments'
+      'Store Code',
+      'Store Name',
+      'State',
+      'Region',
+      'City',
+      'NPS Score',
+      'NPS Category',
+      'Response Date',
+      'Comments',
     ];
-    
+
     const rows = data.map(record => [
       record.storeCode || '',
       record.storeName || '',
@@ -313,12 +322,12 @@ class CSVDataService {
       record.npsScore || '',
       record.npsCategory || '',
       record.responseDate || '',
-      `"${(record.comments || '').replace(/"/g, '""')}"`
+      `"${(record.comments || '').replace(/"/g, '""')}"`,
     ]);
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.join(','))
+      ...rows.map(row => row.join(',')),
     ].join('\n');
 
     // Download file
@@ -332,4 +341,4 @@ class CSVDataService {
   }
 }
 
-export default new CSVDataService(); 
+export default new CSVDataService();

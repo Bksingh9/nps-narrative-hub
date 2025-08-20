@@ -7,7 +7,10 @@ interface ProtectedRouteProps {
   requiredRole?: 'admin' | 'user' | 'store_manager';
 }
 
-export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export default function ProtectedRoute({
+  children,
+  requiredRole,
+}: ProtectedRouteProps) {
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -18,30 +21,30 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
     const checkAuth = () => {
       const authenticated = authService.isAuthenticated();
       const currentUser = authService.getCurrentUser();
-      
+
       setIsAuthenticated(authenticated);
-      
+
       // Check role-based access if required
       if (authenticated && requiredRole && currentUser) {
         const roleHierarchy = {
-          'admin': 3,
-          'store_manager': 2,
-          'user': 1
+          admin: 3,
+          store_manager: 2,
+          user: 1,
         };
 
         const userRoleLevel = roleHierarchy[currentUser.role] || 0;
         const requiredRoleLevel = roleHierarchy[requiredRole] || 0;
-        
+
         setHasAccess(userRoleLevel >= requiredRoleLevel);
       } else if (authenticated) {
         setHasAccess(true);
       } else {
         setHasAccess(false);
       }
-      
+
       setIsChecking(false);
     };
-    
+
     checkAuth();
   }, [requiredRole]);
 
@@ -68,4 +71,4 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
   }
 
   return <>{children}</>;
-} 
+}

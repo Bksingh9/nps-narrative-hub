@@ -1,25 +1,35 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useData } from "@/contexts/DataContext";
-import { CheckCircle, XCircle, AlertCircle, RefreshCw, Database, Server, HardDrive } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useData } from '@/contexts/DataContext';
+import {
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  RefreshCw,
+  Database,
+  Server,
+  HardDrive,
+} from 'lucide-react';
 
 export default function DataDiagnostic() {
-  const { 
-    rawData, 
-    filteredData, 
-    aggregates, 
+  const {
+    rawData,
+    filteredData,
+    aggregates,
     filters,
     filterOptions,
     isLoading,
     hasData,
     lastUpdated,
     refreshData,
-    loadFromLocalStorage
+    loadFromLocalStorage,
   } = useData();
 
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  const [backendStatus, setBackendStatus] = useState<
+    'checking' | 'connected' | 'error'
+  >('checking');
   const [backendData, setBackendData] = useState<any>(null);
   const [localStorageData, setLocalStorageData] = useState<any>(null);
 
@@ -32,9 +42,11 @@ export default function DataDiagnostic() {
     try {
       const healthResponse = await fetch('http://localhost:3001/health');
       const healthData = await healthResponse.json();
-      
+
       if (healthData.status === 'ok') {
-        const dataResponse = await fetch('http://localhost:3001/api/crawler/csv/current-data');
+        const dataResponse = await fetch(
+          'http://localhost:3001/api/crawler/csv/current-data'
+        );
         const dataResult = await dataResponse.json();
         setBackendData(dataResult);
         setBackendStatus('connected');
@@ -52,13 +64,13 @@ export default function DataDiagnostic() {
       const npsRecords = localStorage.getItem('nps-records');
       const npsFilters = localStorage.getItem('nps-filters');
       const npsAggregates = localStorage.getItem('nps-aggregates');
-      
+
       setLocalStorageData({
         hasRecords: !!npsRecords,
         recordCount: npsRecords ? JSON.parse(npsRecords).length : 0,
         hasFilters: !!npsFilters,
         filters: npsFilters ? JSON.parse(npsFilters) : null,
-        hasAggregates: !!npsAggregates
+        hasAggregates: !!npsAggregates,
       });
     } catch (error) {
       console.error('LocalStorage check failed:', error);
@@ -86,7 +98,9 @@ export default function DataDiagnostic() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Data Diagnostic Dashboard</h1>
         <Button onClick={forceRefresh} disabled={isLoading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw
+            className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`}
+          />
           Refresh All
         </Button>
       </div>
@@ -110,27 +124,36 @@ export default function DataDiagnostic() {
                 <AlertCircle className="h-5 w-5 text-yellow-500" />
               )}
               <span className="font-medium">
-                {backendStatus === 'connected' ? 'Connected' : 
-                 backendStatus === 'error' ? 'Disconnected' : 'Checking...'}
+                {backendStatus === 'connected'
+                  ? 'Connected'
+                  : backendStatus === 'error'
+                    ? 'Disconnected'
+                    : 'Checking...'}
               </span>
             </div>
-            
+
             {backendData && (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Has Data:</span>
-                  <Badge variant={backendData.hasData ? "default" : "secondary"}>
+                  <Badge
+                    variant={backendData.hasData ? 'default' : 'secondary'}
+                  >
                     {backendData.hasData ? 'Yes' : 'No'}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Records:</span>
-                  <span className="font-medium">{backendData.totalRecords || 0}</span>
+                  <span className="font-medium">
+                    {backendData.totalRecords || 0}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Last Updated:</span>
                   <span className="font-medium text-xs">
-                    {backendData.lastUpdated ? new Date(backendData.lastUpdated).toLocaleTimeString() : 'Never'}
+                    {backendData.lastUpdated
+                      ? new Date(backendData.lastUpdated).toLocaleTimeString()
+                      : 'Never'}
                   </span>
                 </div>
               </div>
@@ -157,7 +180,7 @@ export default function DataDiagnostic() {
                 {hasData ? 'Data Loaded' : 'No Data'}
               </span>
             </div>
-            
+
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Raw Records:</span>
@@ -169,22 +192,30 @@ export default function DataDiagnostic() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Active Filters:</span>
-                <span className="font-medium">{Object.keys(filters).length}</span>
+                <span className="font-medium">
+                  {Object.keys(filters).length}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">States:</span>
-                <span className="font-medium">{filterOptions.states.length}</span>
+                <span className="font-medium">
+                  {filterOptions.states.length}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Cities:</span>
-                <span className="font-medium">{filterOptions.cities.length}</span>
+                <span className="font-medium">
+                  {filterOptions.cities.length}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Stores:</span>
-                <span className="font-medium">{filterOptions.stores.length}</span>
+                <span className="font-medium">
+                  {filterOptions.stores.length}
+                </span>
               </div>
             </div>
-            
+
             {lastUpdated && (
               <div className="text-xs text-muted-foreground">
                 Last Updated: {lastUpdated.toLocaleTimeString()}
@@ -212,39 +243,49 @@ export default function DataDiagnostic() {
                 {localStorageData?.hasRecords ? 'Has Data' : 'No Data'}
               </span>
             </div>
-            
+
             {localStorageData && (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Records:</span>
-                  <span className="font-medium">{localStorageData.recordCount}</span>
+                  <span className="font-medium">
+                    {localStorageData.recordCount}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Has Filters:</span>
-                  <Badge variant={localStorageData.hasFilters ? "default" : "secondary"}>
+                  <Badge
+                    variant={
+                      localStorageData.hasFilters ? 'default' : 'secondary'
+                    }
+                  >
                     {localStorageData.hasFilters ? 'Yes' : 'No'}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Has Aggregates:</span>
-                  <Badge variant={localStorageData.hasAggregates ? "default" : "secondary"}>
+                  <Badge
+                    variant={
+                      localStorageData.hasAggregates ? 'default' : 'secondary'
+                    }
+                  >
                     {localStorageData.hasAggregates ? 'Yes' : 'No'}
                   </Badge>
                 </div>
               </div>
             )}
-            
+
             <div className="flex gap-2">
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="outline"
                 className="flex-1"
                 onClick={loadFromLocalStorage}
               >
                 Load Local
               </Button>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="destructive"
                 className="flex-1"
                 onClick={clearLocalStorage}
@@ -266,19 +307,27 @@ export default function DataDiagnostic() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Average Score</p>
-                <p className="text-2xl font-bold">{aggregates.averageScore?.toFixed(1) || 0}</p>
+                <p className="text-2xl font-bold">
+                  {aggregates.averageScore?.toFixed(1) || 0}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">NPS Score</p>
-                <p className="text-2xl font-bold">{aggregates.npsScore?.toFixed(0) || 0}</p>
+                <p className="text-2xl font-bold">
+                  {aggregates.npsScore?.toFixed(0) || 0}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Responses</p>
-                <p className="text-2xl font-bold">{aggregates.totalResponses || 0}</p>
+                <p className="text-2xl font-bold">
+                  {aggregates.totalResponses || 0}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Promoters</p>
-                <p className="text-2xl font-bold text-green-600">{aggregates.promoters || 0}</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {aggregates.promoters || 0}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -310,20 +359,24 @@ export default function DataDiagnostic() {
         </CardHeader>
         <CardContent>
           <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs">
-            {JSON.stringify({
-              isLoading,
-              hasData,
-              rawDataLength: rawData.length,
-              filteredDataLength: filteredData.length,
-              activeFilters: filters,
-              backendStatus,
-              backendHasData: backendData?.hasData,
-              backendRecords: backendData?.totalRecords,
-              localStorageRecords: localStorageData?.recordCount
-            }, null, 2)}
+            {JSON.stringify(
+              {
+                isLoading,
+                hasData,
+                rawDataLength: rawData.length,
+                filteredDataLength: filteredData.length,
+                activeFilters: filters,
+                backendStatus,
+                backendHasData: backendData?.hasData,
+                backendRecords: backendData?.totalRecords,
+                localStorageRecords: localStorageData?.recordCount,
+              },
+              null,
+              2
+            )}
           </pre>
         </CardContent>
       </Card>
     </div>
   );
-} 
+}

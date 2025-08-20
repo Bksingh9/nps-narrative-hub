@@ -1,16 +1,44 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Store, MapPin, TrendingUp, TrendingDown, Users, 
-  MessageSquare, Calendar, Star, AlertTriangle,
-  ChevronRight, Mail, Phone, Globe, Copy as CopyIcon, Filter as FilterIcon
-} from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Store,
+  MapPin,
+  TrendingUp,
+  TrendingDown,
+  Users,
+  MessageSquare,
+  Calendar,
+  Star,
+  AlertTriangle,
+  ChevronRight,
+  Mail,
+  Phone,
+  Globe,
+  Copy as CopyIcon,
+  Filter as FilterIcon,
+} from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 
 interface StoreDetails {
   storeCode: string;
@@ -42,10 +70,17 @@ interface StoreDetailViewProps {
   data?: any[];
 }
 
-export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDetailViewProps) {
+export function StoreDetailView({
+  storeCode,
+  open,
+  onClose,
+  data = [],
+}: StoreDetailViewProps) {
   const [storeDetails, setStoreDetails] = useState<StoreDetails | null>(null);
   const [npsMetrics, setNPSMetrics] = useState<NPSMetrics | null>(null);
-  const [comments, setComments] = useState<Array<{ text: string; score: number; date: string }>>([]);
+  const [comments, setComments] = useState<
+    Array<{ text: string; score: number; date: string }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -56,11 +91,12 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
 
   const analyzeStoreData = () => {
     setIsLoading(true);
-    
+
     try {
       // Filter data for this store
       const storeData = data.filter(record => {
-        const recordStoreCode = record.storeCode || record['Store Code'] || record['Store No'];
+        const recordStoreCode =
+          record.storeCode || record['Store Code'] || record['Store No'];
         return recordStoreCode === storeCode;
       });
 
@@ -73,39 +109,71 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
       const firstRecord = storeData[0];
       const details: StoreDetails = {
         storeCode,
-        storeName: firstRecord.storeName || firstRecord['Store Name'] || firstRecord.Description || storeCode,
+        storeName:
+          firstRecord.storeName ||
+          firstRecord['Store Name'] ||
+          firstRecord.Description ||
+          storeCode,
         state: firstRecord.state || firstRecord.State || 'Unknown',
         city: firstRecord.city || firstRecord.City || 'Unknown',
         region: firstRecord.region || firstRecord.Region,
         manager: firstRecord.manager || 'Not Available',
         email: firstRecord.email || 'store@trends.com',
-        phone: firstRecord.phone || '1-800-TRENDS'
+        phone: firstRecord.phone || '1-800-TRENDS',
       };
       setStoreDetails(details);
 
       // Calculate NPS metrics
-      const scores = storeData.map(r => {
-        const score = r.npsScore ?? r['NPS Score'] ?? r.nps ?? 
-                     r['On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'];
-        return typeof score === 'number' ? score : parseFloat(String(score || '').trim());
-      }).filter(s => !isNaN(s) && s >= 0 && s <= 10);
+      const scores = storeData
+        .map(r => {
+          const score =
+            r.npsScore ??
+            r['NPS Score'] ??
+            r.nps ??
+            r[
+              'On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'
+            ];
+          return typeof score === 'number'
+            ? score
+            : parseFloat(String(score || '').trim());
+        })
+        .filter(s => !isNaN(s) && s >= 0 && s <= 10);
 
       const promoters = scores.filter(s => s >= 9).length;
       const passives = scores.filter(s => s >= 7 && s < 9).length;
       const detractors = scores.filter(s => s <= 6).length;
-      const currentNPS = scores.length > 0 ? Math.round(((promoters - detractors) / scores.length) * 100) : 0;
-      const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      const currentNPS =
+        scores.length > 0
+          ? Math.round(((promoters - detractors) / scores.length) * 100)
+          : 0;
+      const avgScore =
+        scores.length > 0
+          ? scores.reduce((a, b) => a + b, 0) / scores.length
+          : 0;
 
       // Group by month for trend
       const monthlyData = new Map<string, number[]>();
       storeData.forEach(record => {
-        const date = new Date(record.responseDate || record['Response Date'] || record.Date || new Date());
+        const date = new Date(
+          record.responseDate ||
+            record['Response Date'] ||
+            record.Date ||
+            new Date()
+        );
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        
-        const score = record.npsScore ?? record['NPS Score'] ?? record.nps ?? 
-                     record['On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'];
-        const numScore = typeof score === 'number' ? score : parseFloat(String(score || '').trim());
-        
+
+        const score =
+          record.npsScore ??
+          record['NPS Score'] ??
+          record.nps ??
+          record[
+            'On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'
+          ];
+        const numScore =
+          typeof score === 'number'
+            ? score
+            : parseFloat(String(score || '').trim());
+
         if (!isNaN(numScore)) {
           if (!monthlyData.has(monthKey)) {
             monthlyData.set(monthKey, []);
@@ -118,19 +186,32 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
         .map(([month, scores]) => {
           const monthPromoters = scores.filter(s => s >= 9).length;
           const monthDetractors = scores.filter(s => s <= 6).length;
-          const monthNPS = Math.round(((monthPromoters - monthDetractors) / scores.length) * 100);
-          
+          const monthNPS = Math.round(
+            ((monthPromoters - monthDetractors) / scores.length) * 100
+          );
+
           return {
-            month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+            month: new Date(month + '-01').toLocaleDateString('en-US', {
+              month: 'short',
+              year: '2-digit',
+            }),
             nps: monthNPS,
-            responses: scores.length
+            responses: scores.length,
           };
         })
         .sort((a, b) => a.month.localeCompare(b.month))
         .slice(-6); // Last 6 months
 
-      const previousNPS = monthlyTrend.length >= 2 ? monthlyTrend[monthlyTrend.length - 2].nps : currentNPS;
-      const trend = currentNPS > previousNPS ? 'improving' : currentNPS < previousNPS ? 'declining' : 'stable';
+      const previousNPS =
+        monthlyTrend.length >= 2
+          ? monthlyTrend[monthlyTrend.length - 2].nps
+          : currentNPS;
+      const trend =
+        currentNPS > previousNPS
+          ? 'improving'
+          : currentNPS < previousNPS
+            ? 'declining'
+            : 'stable';
 
       const metrics: NPSMetrics = {
         currentNPS,
@@ -141,21 +222,28 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
         detractors,
         totalResponses: scores.length,
         avgScore,
-        monthlyTrend
+        monthlyTrend,
       };
       setNPSMetrics(metrics);
 
       // Extract comments
       const extractedComments = storeData
         .map(record => ({
-          text: record.comments || record.Comments || record['Any other feedback?'] || '',
+          text:
+            record.comments ||
+            record.Comments ||
+            record['Any other feedback?'] ||
+            '',
           score: record.npsScore ?? record['NPS Score'] ?? record.nps ?? 0,
-          date: record.responseDate || record['Response Date'] || new Date().toISOString()
+          date:
+            record.responseDate ||
+            record['Response Date'] ||
+            new Date().toISOString(),
         }))
         .filter(c => c.text && c.text.trim())
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 10);
-      
+
       setComments(extractedComments);
     } catch (error) {
       console.error('Error analyzing store data:', error);
@@ -180,15 +268,19 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
 
   const handleFilterToStore = () => {
     // Dispatch a global event that CSVDataSync listens to
-    window.dispatchEvent(new CustomEvent('apply-filters' as any, { detail: { storeCode } } as any));
+    window.dispatchEvent(
+      new CustomEvent('apply-filters' as any, { detail: { storeCode } } as any)
+    );
     onClose();
   };
 
-  const pieData = npsMetrics ? [
-    { name: 'Promoters', value: npsMetrics.promoters, color: '#10b981' },
-    { name: 'Passives', value: npsMetrics.passives, color: '#6b7280' },
-    { name: 'Detractors', value: npsMetrics.detractors, color: '#ef4444' }
-  ] : [];
+  const pieData = npsMetrics
+    ? [
+        { name: 'Promoters', value: npsMetrics.promoters, color: '#10b981' },
+        { name: 'Passives', value: npsMetrics.passives, color: '#6b7280' },
+        { name: 'Detractors', value: npsMetrics.detractors, color: '#ef4444' },
+      ]
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -229,7 +321,9 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Region</p>
-                    <p className="font-medium">{storeDetails.region || 'N/A'}</p>
+                    <p className="font-medium">
+                      {storeDetails.region || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Store Code</p>
@@ -251,7 +345,10 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">NPS Score</p>
-                      <p className="text-4xl font-bold" style={{ color: getNPSColor(npsMetrics.currentNPS) }}>
+                      <p
+                        className="text-4xl font-bold"
+                        style={{ color: getNPSColor(npsMetrics.currentNPS) }}
+                      >
                         {npsMetrics.currentNPS}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
@@ -263,13 +360,20 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                           <ChevronRight className="w-4 h-4 text-gray-500" />
                         )}
                         <span className="text-sm">
-                          {Math.abs(npsMetrics.currentNPS - npsMetrics.previousNPS)} points from last period
+                          {Math.abs(
+                            npsMetrics.currentNPS - npsMetrics.previousNPS
+                          )}{' '}
+                          points from last period
                         </span>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Total Responses</p>
-                      <p className="text-2xl font-bold">{npsMetrics.totalResponses}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Total Responses
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {npsMetrics.totalResponses}
+                      </p>
                       <p className="text-sm text-muted-foreground mt-1">
                         Avg Score: {npsMetrics.avgScore.toFixed(1)}
                       </p>
@@ -292,10 +396,10 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                       <XAxis dataKey="month" />
                       <YAxis />
                       <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="nps" 
-                        stroke="#8884d8" 
+                      <Line
+                        type="monotone"
+                        dataKey="nps"
+                        stroke="#8884d8"
                         strokeWidth={2}
                         dot={{ fill: '#8884d8' }}
                       />
@@ -320,7 +424,9 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }) =>
+                            `${name} ${(percent * 100).toFixed(0)}%`
+                          }
                         >
                           {pieData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -382,11 +488,15 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                         {comments.map((comment, i) => (
                           <div key={i} className="border rounded-lg p-4">
                             <div className="flex justify-between items-start mb-2">
-                              <Badge variant={
-                                comment.score >= 9 ? 'default' : 
-                                comment.score >= 7 ? 'secondary' : 
-                                'destructive'
-                              }>
+                              <Badge
+                                variant={
+                                  comment.score >= 9
+                                    ? 'default'
+                                    : comment.score >= 7
+                                      ? 'secondary'
+                                      : 'destructive'
+                                }
+                              >
                                 Score: {comment.score}
                               </Badge>
                               <span className="text-xs text-muted-foreground">
@@ -412,21 +522,27 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                   <div className="flex items-center gap-3">
                     <Store className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Store Name</p>
+                      <p className="text-sm text-muted-foreground">
+                        Store Name
+                      </p>
                       <p className="font-medium">{storeDetails.storeName}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="secondary">Code</Badge>
                     <div>
-                      <p className="text-sm text-muted-foreground">Store Code</p>
+                      <p className="text-sm text-muted-foreground">
+                        Store Code
+                      </p>
                       <p className="font-medium">{storeDetails.storeCode}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Store Manager</p>
+                      <p className="text-sm text-muted-foreground">
+                        Store Manager
+                      </p>
                       <p className="font-medium">{storeDetails.manager}</p>
                     </div>
                   </div>
@@ -447,21 +563,33 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                   <div className="flex items-center gap-3">
                     <MapPin className="w-5 h-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Full Address</p>
+                      <p className="text-sm text-muted-foreground">
+                        Full Address
+                      </p>
                       <p className="font-medium">
                         {storeDetails.city}, {storeDetails.state}
-                        {storeDetails.region && ` - ${storeDetails.region} Region`}
+                        {storeDetails.region &&
+                          ` - ${storeDetails.region} Region`}
                       </p>
                     </div>
                   </div>
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" onClick={handleCopyStoreCode}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopyStoreCode}
+                    >
                       <CopyIcon className="w-4 h-4 mr-2" /> Copy Store Code
                     </Button>
-                    <Button variant="default" size="sm" onClick={handleFilterToStore}>
-                      <FilterIcon className="w-4 h-4 mr-2" /> Filter to this Store
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleFilterToStore}
+                    >
+                      <FilterIcon className="w-4 h-4 mr-2" /> Filter to this
+                      Store
                     </Button>
                   </div>
                 </CardContent>
@@ -471,20 +599,25 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
                 <Button variant="outline" onClick={() => window.print()}>
                   Print Report
                 </Button>
-                <Button onClick={() => {
-                  // Export functionality
-                  const exportData = {
-                    storeDetails,
-                    npsMetrics,
-                    comments
-                  };
-                  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `store-${storeCode}-report.json`;
-                  a.click();
-                }}>
+                <Button
+                  onClick={() => {
+                    // Export functionality
+                    const exportData = {
+                      storeDetails,
+                      npsMetrics,
+                      comments,
+                    };
+                    const blob = new Blob(
+                      [JSON.stringify(exportData, null, 2)],
+                      { type: 'application/json' }
+                    );
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `store-${storeCode}-report.json`;
+                    a.click();
+                  }}
+                >
                   Export Data
                 </Button>
               </div>
@@ -493,10 +626,12 @@ export function StoreDetailView({ storeCode, open, onClose, data = [] }: StoreDe
         ) : (
           <div className="text-center py-12">
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No data available for this store</p>
+            <p className="text-muted-foreground">
+              No data available for this store
+            </p>
           </div>
         )}
       </DialogContent>
     </Dialog>
   );
-} 
+}

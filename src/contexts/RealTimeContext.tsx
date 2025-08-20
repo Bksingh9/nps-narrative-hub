@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 import { toast } from 'sonner';
 
 export interface RealTimeConfig {
@@ -20,7 +26,9 @@ interface RealTimeContextType {
   isRefreshing: boolean;
 }
 
-const RealTimeContext = createContext<RealTimeContextType | undefined>(undefined);
+const RealTimeContext = createContext<RealTimeContextType | undefined>(
+  undefined
+);
 
 const defaultConfig: RealTimeConfig = {
   autoRefreshEnabled: true,
@@ -29,7 +37,7 @@ const defaultConfig: RealTimeConfig = {
   apiEndpoint: '',
   apiKey: '',
   lastUpdated: null,
-  connectionStatus: 'disconnected'
+  connectionStatus: 'disconnected',
 };
 
 export function RealTimeProvider({ children }: { children: ReactNode }) {
@@ -44,7 +52,7 @@ export function RealTimeProvider({ children }: { children: ReactNode }) {
     } as Partial<RealTimeConfig>;
     return { ...defaultConfig, ...revived } as RealTimeConfig;
   });
-  
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
 
@@ -54,19 +62,19 @@ export function RealTimeProvider({ children }: { children: ReactNode }) {
   }, [config]);
 
   // Auto-refresh functionality
-  useEffect(() => {
-    if (config.autoRefreshEnabled && config.refreshInterval > 0) {
-      const timer = setInterval(() => {
-        refreshData();
-      }, config.refreshInterval * 1000);
-      
-      setRefreshTimer(timer);
-      return () => clearInterval(timer);
-    } else if (refreshTimer) {
-      clearInterval(refreshTimer);
-      setRefreshTimer(null);
-    }
-  }, [config.autoRefreshEnabled, config.refreshInterval]);
+  // useEffect(() => {
+  //   if (config.autoRefreshEnabled && config.refreshInterval > 0) {
+  //     const timer = setInterval(() => {
+  //       refreshData();
+  //     }, config.refreshInterval * 1000);
+
+  //     setRefreshTimer(timer);
+  //     return () => clearInterval(timer);
+  //   } else if (refreshTimer) {
+  //     clearInterval(refreshTimer);
+  //     setRefreshTimer(null);
+  //   }
+  // }, [config.autoRefreshEnabled, config.refreshInterval]);
 
   const updateConfig = (updates: Partial<RealTimeConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }));
@@ -74,27 +82,26 @@ export function RealTimeProvider({ children }: { children: ReactNode }) {
 
   const refreshData = async () => {
     if (isRefreshing) return;
-    
+
     setIsRefreshing(true);
     updateConfig({ connectionStatus: 'connecting' });
-    
+
     try {
       // Simulate API call - replace with actual data fetching
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      updateConfig({ 
+
+      updateConfig({
         lastUpdated: new Date(),
-        connectionStatus: 'connected'
+        connectionStatus: 'connected',
       });
-      
+
       toast.success('Data refreshed successfully', {
-        description: `Updated at ${new Date().toLocaleTimeString()}`
+        description: `Updated at ${new Date().toLocaleTimeString()}`,
       });
-      
     } catch (error) {
       updateConfig({ connectionStatus: 'error' });
       toast.error('Failed to refresh data', {
-        description: 'Check your API configuration'
+        description: 'Check your API configuration',
       });
     } finally {
       setIsRefreshing(false);
@@ -103,10 +110,10 @@ export function RealTimeProvider({ children }: { children: ReactNode }) {
 
   const toggleAutoRefresh = () => {
     updateConfig({ autoRefreshEnabled: !config.autoRefreshEnabled });
-    
+
     if (!config.autoRefreshEnabled) {
       toast.success('Auto-refresh enabled', {
-        description: `Refreshing every ${config.refreshInterval} seconds`
+        description: `Refreshing every ${config.refreshInterval} seconds`,
       });
     } else {
       toast.info('Auto-refresh disabled');
@@ -116,27 +123,26 @@ export function RealTimeProvider({ children }: { children: ReactNode }) {
   const testConnection = async (): Promise<boolean> => {
     if (!config.apiEndpoint || !config.apiKey) {
       toast.error('API configuration required', {
-        description: 'Please configure your API endpoint and key'
+        description: 'Please configure your API endpoint and key',
       });
       return false;
     }
 
     updateConfig({ connectionStatus: 'connecting' });
-    
+
     try {
       // Simulate API test - replace with actual test
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       updateConfig({ connectionStatus: 'connected' });
       toast.success('Connection successful', {
-        description: 'API endpoint is responding'
+        description: 'API endpoint is responding',
       });
       return true;
-      
     } catch (error) {
       updateConfig({ connectionStatus: 'error' });
       toast.error('Connection failed', {
-        description: 'Unable to connect to API endpoint'
+        description: 'Unable to connect to API endpoint',
       });
       return false;
     }
@@ -150,7 +156,7 @@ export function RealTimeProvider({ children }: { children: ReactNode }) {
         refreshData,
         toggleAutoRefresh,
         testConnection,
-        isRefreshing
+        isRefreshing,
       }}
     >
       {children}
@@ -164,4 +170,4 @@ export function useRealTime() {
     throw new Error('useRealTime must be used within a RealTimeProvider');
   }
   return context;
-} 
+}

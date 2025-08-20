@@ -20,23 +20,37 @@ export function useFilteredData<T extends DataItem>(data: T[]): T[] {
       if (filters.dateRange.from || filters.dateRange.to) {
         const itemDate = item.date ? new Date(item.date) : null;
         if (itemDate) {
-          if (filters.dateRange.from && itemDate < filters.dateRange.from) return false;
-          if (filters.dateRange.to && itemDate > filters.dateRange.to) return false;
+          if (filters.dateRange.from && itemDate < filters.dateRange.from)
+            return false;
+          if (filters.dateRange.to && itemDate > filters.dateRange.to)
+            return false;
         }
       }
 
       // Store filter
-      if (filters.selectedStore && item.store && item.store !== filters.selectedStore) {
+      if (
+        filters.selectedStore &&
+        item.store &&
+        item.store !== filters.selectedStore
+      ) {
         return false;
       }
 
       // State filter
-      if (filters.selectedState && item.state && item.state !== filters.selectedState) {
+      if (
+        filters.selectedState &&
+        item.state &&
+        item.state !== filters.selectedState
+      ) {
         return false;
       }
 
       // Region filter
-      if (filters.selectedRegion && item.region && item.region !== filters.selectedRegion) {
+      if (
+        filters.selectedRegion &&
+        item.region &&
+        item.region !== filters.selectedRegion
+      ) {
         return false;
       }
 
@@ -51,14 +65,20 @@ export function useFilterSummary() {
 
   return useMemo(() => {
     const activeFilters = [];
-    
+
     if (filters.dateRange.from || filters.dateRange.to) {
       if (filters.dateRange.from && filters.dateRange.to) {
-        activeFilters.push(`Date: ${filters.dateRange.from.toLocaleDateString()} - ${filters.dateRange.to.toLocaleDateString()}`);
+        activeFilters.push(
+          `Date: ${filters.dateRange.from.toLocaleDateString()} - ${filters.dateRange.to.toLocaleDateString()}`
+        );
       } else if (filters.dateRange.from) {
-        activeFilters.push(`From: ${filters.dateRange.from.toLocaleDateString()}`);
+        activeFilters.push(
+          `From: ${filters.dateRange.from.toLocaleDateString()}`
+        );
       } else if (filters.dateRange.to) {
-        activeFilters.push(`Until: ${filters.dateRange.to.toLocaleDateString()}`);
+        activeFilters.push(
+          `Until: ${filters.dateRange.to.toLocaleDateString()}`
+        );
       }
     }
 
@@ -77,7 +97,7 @@ export function useFilterSummary() {
     return {
       hasActiveFilters: activeFilters.length > 0,
       activeFilters,
-      summary: activeFilters.join(', ')
+      summary: activeFilters.join(', '),
     };
   }, [filters]);
 }

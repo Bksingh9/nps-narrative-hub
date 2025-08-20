@@ -23,9 +23,10 @@ class OpenAIService {
 
   private initializeApiKey() {
     // Try to get API key from localStorage or environment
-    this.apiKey = localStorage.getItem('openai_api_key') || 
-                  process.env.REACT_APP_OPENAI_API_KEY || 
-                  null;
+    this.apiKey =
+      localStorage.getItem('openai_api_key') ||
+      process.env.REACT_APP_OPENAI_API_KEY ||
+      null;
   }
 
   setApiKey(key: string) {
@@ -45,28 +46,29 @@ class OpenAIService {
 
     try {
       const prompt = this.buildPrompt(request);
-      
+
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
           model: this.model,
           messages: [
             {
               role: 'system',
-              content: 'You are an NPS analytics expert. Provide actionable insights based on the data. Be specific and reference actual numbers.'
+              content:
+                'You are an NPS analytics expert. Provide actionable insights based on the data. Be specific and reference actual numbers.',
             },
             {
               role: 'user',
-              content: prompt
-            }
+              content: prompt,
+            },
           ],
           temperature: 0.3,
-          max_tokens: 500
-        })
+          max_tokens: 500,
+        }),
       });
 
       if (!response.ok) {
@@ -75,7 +77,7 @@ class OpenAIService {
 
       const data = await response.json();
       const content = data.choices[0].message.content;
-      
+
       return this.parseAIResponse(content);
     } catch (error) {
       console.error('OpenAI API Error:', error);
@@ -86,7 +88,7 @@ class OpenAIService {
 
   private buildPrompt(request: InsightRequest): string {
     const { type, data, context } = request;
-    
+
     switch (type) {
       case 'general':
         return `Analyze this NPS data and provide 3 key insights:
@@ -97,7 +99,7 @@ class OpenAIService {
           States: ${data.states}
           Stores: ${data.stores}
           ${context || ''}`;
-      
+
       case 'store':
         return `Analyze this store's NPS performance:
           Store: ${data.storeName} (${data.storeCode})
@@ -106,7 +108,7 @@ class OpenAIService {
           Trend: ${data.trend}
           Compare to average: ${data.vsAverage}
           ${context || ''}`;
-      
+
       case 'state':
         return `Analyze this state's NPS performance:
           State: ${data.state}
@@ -116,7 +118,7 @@ class OpenAIService {
           Top Store: ${data.topStore}
           Bottom Store: ${data.bottomStore}
           ${context || ''}`;
-      
+
       case 'city':
         return `Analyze this city's NPS performance:
           City: ${data.city}
@@ -125,14 +127,14 @@ class OpenAIService {
           Stores: ${data.storeCount}
           Population: ${data.population || 'Unknown'}
           ${context || ''}`;
-      
+
       case 'alert':
         return `Generate alerts for this NPS data:
           Low Performing Stores: ${JSON.stringify(data.lowPerformers)}
           Declining Trends: ${JSON.stringify(data.declining)}
           Critical Feedback: ${data.criticalCount}
           ${context || ''}`;
-      
+
       case 'trend':
         return `Analyze NPS trends:
           Current Period: ${data.currentNPS}
@@ -140,7 +142,7 @@ class OpenAIService {
           Change: ${data.change}%
           Velocity: ${data.velocity}
           ${context || ''}`;
-      
+
       default:
         return `Analyze this data: ${JSON.stringify(data)}`;
     }
@@ -152,16 +154,19 @@ class OpenAIService {
     const insights: string[] = [];
     const recommendations: string[] = [];
     const alerts: string[] = [];
-    
+
     let currentSection = 'insights';
-    
+
     for (const line of lines) {
       if (line.toLowerCase().includes('recommend')) {
         currentSection = 'recommendations';
-      } else if (line.toLowerCase().includes('alert') || line.toLowerCase().includes('concern')) {
+      } else if (
+        line.toLowerCase().includes('alert') ||
+        line.toLowerCase().includes('concern')
+      ) {
         currentSection = 'alerts';
       }
-      
+
       const cleanLine = line.replace(/^[-•*]\s*/, '').trim();
       if (cleanLine) {
         if (currentSection === 'recommendations') {
@@ -173,12 +178,12 @@ class OpenAIService {
         }
       }
     }
-    
+
     return {
       success: true,
       insights,
       recommendations,
-      alerts
+      alerts,
     };
   }
 
@@ -187,172 +192,248 @@ class OpenAIService {
     const insights: string[] = [];
     const recommendations: string[] = [];
     const alerts: string[] = [];
-    
+
     switch (type) {
       case 'general':
         const npsScore = data.npsScore || 0;
         const promoterPercent = data.promoterPercent || 0;
         const detractorPercent = data.detractorPercent || 0;
-        
+
         // Generate insights based on actual data
         if (npsScore > 50) {
-          insights.push(`Strong NPS score of ${npsScore} indicates excellent customer satisfaction across ${data.stores || 0} stores.`);
+          insights.push(
+            `Strong NPS score of ${npsScore} indicates excellent customer satisfaction across ${data.stores || 0} stores.`
+          );
         } else if (npsScore > 0) {
-          insights.push(`NPS score of ${npsScore} shows room for improvement. Focus on converting passives to promoters.`);
+          insights.push(
+            `NPS score of ${npsScore} shows room for improvement. Focus on converting passives to promoters.`
+          );
         } else {
-          insights.push(`Critical NPS score of ${npsScore} requires immediate attention. ${detractorPercent}% are detractors.`);
+          insights.push(
+            `Critical NPS score of ${npsScore} requires immediate attention. ${detractorPercent}% are detractors.`
+          );
         }
-        
-        insights.push(`${promoterPercent}% of customers are promoters, actively recommending your brand.`);
-        insights.push(`Geographic coverage spans ${data.states || 0} states with ${data.totalResponses || 0} total responses.`);
-        
+
+        insights.push(
+          `${promoterPercent}% of customers are promoters, actively recommending your brand.`
+        );
+        insights.push(
+          `Geographic coverage spans ${data.states || 0} states with ${data.totalResponses || 0} total responses.`
+        );
+
         // Recommendations
         if (detractorPercent > 20) {
-          recommendations.push(`High detractor rate (${detractorPercent}%). Implement immediate recovery program for dissatisfied customers.`);
+          recommendations.push(
+            `High detractor rate (${detractorPercent}%). Implement immediate recovery program for dissatisfied customers.`
+          );
         }
         if (promoterPercent < 50) {
-          recommendations.push(`Increase promoter percentage from ${promoterPercent}% to 50%+ through enhanced customer experience initiatives.`);
+          recommendations.push(
+            `Increase promoter percentage from ${promoterPercent}% to 50%+ through enhanced customer experience initiatives.`
+          );
         }
-        recommendations.push(`Focus on top-performing practices from high-NPS stores and replicate across all locations.`);
-        
+        recommendations.push(
+          `Focus on top-performing practices from high-NPS stores and replicate across all locations.`
+        );
+
         // Alerts
         if (npsScore < 0) {
-          alerts.push(`⚠️ Critical: NPS below zero indicates more detractors than promoters.`);
+          alerts.push(
+            `⚠️ Critical: NPS below zero indicates more detractors than promoters.`
+          );
         }
         if (data.decliningStores > 5) {
-          alerts.push(`📉 ${data.decliningStores} stores showing declining NPS trends.`);
+          alerts.push(
+            `📉 ${data.decliningStores} stores showing declining NPS trends.`
+          );
         }
         break;
-      
+
       case 'store':
         const storeNPS = data.npsScore || 0;
         const vsAverage = data.vsAverage || 0;
-        
-        insights.push(`${data.storeName} (${data.storeCode}) has an NPS of ${storeNPS} based on ${data.responses} responses.`);
-        
+
+        insights.push(
+          `${data.storeName} (${data.storeCode}) has an NPS of ${storeNPS} based on ${data.responses} responses.`
+        );
+
         if (vsAverage > 0) {
-          insights.push(`Performing ${vsAverage} points above average - a top performer in the network.`);
+          insights.push(
+            `Performing ${vsAverage} points above average - a top performer in the network.`
+          );
         } else if (vsAverage < 0) {
-          insights.push(`Performing ${Math.abs(vsAverage)} points below average - improvement needed.`);
+          insights.push(
+            `Performing ${Math.abs(vsAverage)} points below average - improvement needed.`
+          );
         }
-        
+
         if (data.trend === 'improving') {
-          insights.push(`Positive trend detected with ${data.trendValue}% improvement over last period.`);
+          insights.push(
+            `Positive trend detected with ${data.trendValue}% improvement over last period.`
+          );
         } else if (data.trend === 'declining') {
-          alerts.push(`⚠️ Declining trend: ${Math.abs(data.trendValue)}% decrease in NPS.`);
+          alerts.push(
+            `⚠️ Declining trend: ${Math.abs(data.trendValue)}% decrease in NPS.`
+          );
         }
-        
+
         if (storeNPS < 0) {
-          recommendations.push(`Urgent: Implement customer recovery program at this location.`);
-          recommendations.push(`Conduct staff training on customer service excellence.`);
+          recommendations.push(
+            `Urgent: Implement customer recovery program at this location.`
+          );
+          recommendations.push(
+            `Conduct staff training on customer service excellence.`
+          );
         }
         break;
-      
+
       case 'state':
-        insights.push(`${data.state} has ${data.storeCount} stores with average NPS of ${data.npsScore}.`);
-        insights.push(`Top performer: ${data.topStore} | Needs attention: ${data.bottomStore}`);
-        insights.push(`Total responses: ${data.responses} across all locations in the state.`);
-        
+        insights.push(
+          `${data.state} has ${data.storeCount} stores with average NPS of ${data.npsScore}.`
+        );
+        insights.push(
+          `Top performer: ${data.topStore} | Needs attention: ${data.bottomStore}`
+        );
+        insights.push(
+          `Total responses: ${data.responses} across all locations in the state.`
+        );
+
         if (data.npsScore < 30) {
-          alerts.push(`⚠️ State-wide NPS below 30 - systematic issues may exist.`);
-          recommendations.push(`Conduct state-wide assessment and implement improvement program.`);
+          alerts.push(
+            `⚠️ State-wide NPS below 30 - systematic issues may exist.`
+          );
+          recommendations.push(
+            `Conduct state-wide assessment and implement improvement program.`
+          );
         }
         break;
-      
+
       case 'city':
-        insights.push(`${data.city}, ${data.state} shows NPS of ${data.npsScore} across ${data.storeCount} stores.`);
-        
+        insights.push(
+          `${data.city}, ${data.state} shows NPS of ${data.npsScore} across ${data.storeCount} stores.`
+        );
+
         if (data.npsScore > 50) {
-          insights.push(`Strong performance indicates good market fit and customer satisfaction.`);
+          insights.push(
+            `Strong performance indicates good market fit and customer satisfaction.`
+          );
         } else {
-          insights.push(`Below-average performance suggests local market challenges.`);
-          recommendations.push(`Research local competition and customer preferences in ${data.city}.`);
+          insights.push(
+            `Below-average performance suggests local market challenges.`
+          );
+          recommendations.push(
+            `Research local competition and customer preferences in ${data.city}.`
+          );
         }
         break;
-      
+
       case 'alert':
         if (data.lowPerformers && data.lowPerformers.length > 0) {
-          alerts.push(`🔴 ${data.lowPerformers.length} stores with critically low NPS scores need immediate attention.`);
+          alerts.push(
+            `🔴 ${data.lowPerformers.length} stores with critically low NPS scores need immediate attention.`
+          );
         }
         if (data.declining && data.declining.length > 0) {
-          alerts.push(`📉 ${data.declining.length} stores showing declining trends.`);
+          alerts.push(
+            `📉 ${data.declining.length} stores showing declining trends.`
+          );
         }
         if (data.criticalCount > 0) {
-          alerts.push(`⚠️ ${data.criticalCount} critical customer feedback items require response.`);
+          alerts.push(
+            `⚠️ ${data.criticalCount} critical customer feedback items require response.`
+          );
         }
         break;
-      
+
       case 'trend':
         const change = data.change || 0;
         if (change > 0) {
-          insights.push(`📈 Positive trend: NPS improved by ${change}% from ${data.previousNPS} to ${data.currentNPS}.`);
+          insights.push(
+            `📈 Positive trend: NPS improved by ${change}% from ${data.previousNPS} to ${data.currentNPS}.`
+          );
         } else if (change < 0) {
-          alerts.push(`📉 Negative trend: NPS declined by ${Math.abs(change)}% from ${data.previousNPS} to ${data.currentNPS}.`);
+          alerts.push(
+            `📉 Negative trend: NPS declined by ${Math.abs(change)}% from ${data.previousNPS} to ${data.currentNPS}.`
+          );
         } else {
-          insights.push(`Stable NPS at ${data.currentNPS} with no significant change.`);
+          insights.push(
+            `Stable NPS at ${data.currentNPS} with no significant change.`
+          );
         }
-        
+
         if (data.velocity === 'accelerating') {
-          insights.push(`Improvement is accelerating - current initiatives are working.`);
+          insights.push(
+            `Improvement is accelerating - current initiatives are working.`
+          );
         } else if (data.velocity === 'decelerating') {
-          alerts.push(`⚠️ Improvement rate is slowing - consider new strategies.`);
+          alerts.push(
+            `⚠️ Improvement rate is slowing - consider new strategies.`
+          );
         }
         break;
     }
-    
+
     return {
       success: true,
       insights: insights.length > 0 ? insights : ['Analyzing data patterns...'],
       recommendations: recommendations.length > 0 ? recommendations : undefined,
-      alerts: alerts.length > 0 ? alerts : undefined
+      alerts: alerts.length > 0 ? alerts : undefined,
     };
   }
 
-  async generateDrillDownInsights(level: 'state' | 'city' | 'store', identifier: string, data: any): Promise<InsightResponse> {
+  async generateDrillDownInsights(
+    level: 'state' | 'city' | 'store',
+    identifier: string,
+    data: any
+  ): Promise<InsightResponse> {
     const request: InsightRequest = {
       type: level as any,
       data: {
         ...data,
         identifier,
-        level
+        level,
       },
-      context: `Drill-down analysis for ${level}: ${identifier}`
+      context: `Drill-down analysis for ${level}: ${identifier}`,
     };
-    
+
     return this.generateInsights(request);
   }
 
   async generateRealTimeAlerts(data: any): Promise<string[]> {
     const alerts: string[] = [];
-    
+
     // Check for critical NPS scores
     if (data.npsScore < 0) {
       alerts.push(`🔴 CRITICAL: Overall NPS is negative (${data.npsScore})`);
     }
-    
+
     // Check for low performing stores
     const lowPerformers = data.stores?.filter((s: any) => s.nps < 0) || [];
     if (lowPerformers.length > 0) {
       alerts.push(`⚠️ ${lowPerformers.length} stores have negative NPS scores`);
     }
-    
+
     // Check for declining trends
     if (data.trend && data.trend < -5) {
       alerts.push(`📉 NPS declining by ${Math.abs(data.trend)}% this period`);
     }
-    
+
     // Check response rate
     if (data.responseRate && data.responseRate < 10) {
-      alerts.push(`📊 Low response rate (${data.responseRate}%) may affect data reliability`);
+      alerts.push(
+        `📊 Low response rate (${data.responseRate}%) may affect data reliability`
+      );
     }
-    
+
     // Check for detractor spike
     if (data.detractorPercent > 40) {
-      alerts.push(`🚨 High detractor rate: ${data.detractorPercent}% of customers are dissatisfied`);
+      alerts.push(
+        `🚨 High detractor rate: ${data.detractorPercent}% of customers are dissatisfied`
+      );
     }
-    
+
     return alerts;
   }
 }
 
-export default new OpenAIService(); 
+export default new OpenAIService();

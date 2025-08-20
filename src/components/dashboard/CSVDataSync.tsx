@@ -13,44 +13,51 @@ export function CSVDataSync({ onDataLoaded }: CSVDataSyncProps) {
   const loadDataFromBackend = async (filters: any = {}) => {
     try {
       setIsLoading(true);
-      
+
       // Check if data exists on backend
-      const statusResponse = await fetch('http://localhost:3001/api/crawler/csv/current-data');
+      const statusResponse = await fetch(
+        'http://localhost:3001/api/crawler/csv/current-data'
+      );
       const statusResult = await statusResponse.json();
-      
+
       if (statusResult.success && statusResult.hasData) {
         // Fetch filtered data
-        const dataResponse = await fetch('http://localhost:3001/api/crawler/csv/filter', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ filters })
-        });
-        
+        const dataResponse = await fetch(
+          'http://localhost:3001/api/crawler/csv/filter',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filters }),
+          }
+        );
+
         const dataResult = await dataResponse.json();
-        
+
         if (dataResult.success && dataResult.data) {
           // Store in localStorage for other components
           localStorage.setItem('nps-records', JSON.stringify(dataResult.data));
-          
+
           // Dispatch event to update UI
-          window.dispatchEvent(new CustomEvent('nps-data-updated', { 
-            detail: { 
-              records: dataResult.data.length,
-              aggregates: dataResult.aggregates 
-            } 
-          }));
-          
+          window.dispatchEvent(
+            new CustomEvent('nps-data-updated', {
+              detail: {
+                records: dataResult.data.length,
+                aggregates: dataResult.aggregates,
+              },
+            })
+          );
+
           setHasData(true);
-          
+
           if (onDataLoaded) {
             onDataLoaded(dataResult.data, dataResult.aggregates);
           }
-          
+
           console.log(`Loaded ${dataResult.data.length} records from backend`);
           return true;
         }
       }
-      
+
       setHasData(false);
       return false;
     } catch (error) {
@@ -74,27 +81,27 @@ export function CSVDataSync({ onDataLoaded }: CSVDataSyncProps) {
     await loadDataFromBackend(filters);
   };
 
-  // Initial load
-  useEffect(() => {
-    loadDataFromBackend();
-    
-    // Set up periodic sync (every 30 seconds)
-    const interval = setInterval(() => {
-      loadDataFromBackend();
-    }, 30000);
-    
-    // Listen for filter changes
-    const handleFilterChange = (event: CustomEvent) => {
-      applyFilters(event.detail);
-    };
-    
-    window.addEventListener('apply-filters' as any, handleFilterChange as any);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('apply-filters' as any, handleFilterChange as any);
-    };
-  }, []);
+  // // Initial load
+  // useEffect(() => {
+  //   loadDataFromBackend();
+
+  //   // Set up periodic sync (every 30 seconds)
+  //   const interval = setInterval(() => {
+  //     loadDataFromBackend();
+  //   }, 30000);
+
+  //   // Listen for filter changes
+  //   const handleFilterChange = (event: CustomEvent) => {
+  //     applyFilters(event.detail);
+  //   };
+
+  //   window.addEventListener('apply-filters' as any, handleFilterChange as any);
+
+  //   return () => {
+  //     clearInterval(interval);
+  //     window.removeEventListener('apply-filters' as any, handleFilterChange as any);
+  //   };
+  // }, []);
 
   // Expose methods globally
   useEffect(() => {
@@ -102,7 +109,7 @@ export function CSVDataSync({ onDataLoaded }: CSVDataSyncProps) {
       refresh: () => loadDataFromBackend(),
       applyFilters: (filters: any) => applyFilters(filters),
       hasData: () => hasData,
-      isLoading: () => isLoading
+      isLoading: () => isLoading,
     };
   }, [hasData, isLoading]);
 
@@ -127,4 +134,4 @@ export function CSVDataSync({ onDataLoaded }: CSVDataSyncProps) {
   return null;
 }
 
-export default CSVDataSync; 
+export default CSVDataSync;

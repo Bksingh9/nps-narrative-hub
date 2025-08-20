@@ -13,9 +13,9 @@ const templates = {
       ratings: '.jANrlb .fontBodyMedium',
       reviews: '.MyEned',
       dates: '.rsqaWe',
-      npsScore: 'span[aria-label*="stars"]'
+      npsScore: 'span[aria-label*="stars"]',
     },
-    usePuppeteer: true
+    usePuppeteer: true,
   },
   trustpilot: {
     name: 'Trustpilot',
@@ -24,9 +24,9 @@ const templates = {
       ratings: '[data-rating]',
       reviews: '.styles_reviewCardInner__EwDq2 p',
       dates: 'time',
-      npsScore: '.styles_rating__pY5Pk'
+      npsScore: '.styles_rating__pY5Pk',
     },
-    usePuppeteer: false
+    usePuppeteer: false,
   },
   yelp: {
     name: 'Yelp Reviews',
@@ -35,18 +35,18 @@ const templates = {
       ratings: '[aria-label*="star rating"]',
       reviews: 'span[lang="en"]',
       dates: '.css-chan6m',
-      waitFor: '.review'
+      waitFor: '.review',
     },
-    usePuppeteer: true
+    usePuppeteer: true,
   },
   surveyMonkey: {
     name: 'SurveyMonkey Results',
     selectors: {
       dataTable: 'table.results-table',
       npsScore: '.nps-score',
-      waitFor: '.survey-results'
+      waitFor: '.survey-results',
     },
-    usePuppeteer: true
+    usePuppeteer: true,
   },
   generic: {
     name: 'Generic Crawler',
@@ -54,10 +54,10 @@ const templates = {
       dataTable: 'table',
       reviews: '.review, .comment, .feedback',
       ratings: '.rating, .score, .stars',
-      dates: '.date, time, .timestamp'
+      dates: '.date, time, .timestamp',
     },
-    usePuppeteer: false
-  }
+    usePuppeteer: false,
+  },
 };
 
 const crawlerController = {
@@ -65,7 +65,7 @@ const crawlerController = {
   async crawlSingle(req, res) {
     try {
       const { url, template, customSelectors, usePuppeteer = false } = req.body;
-      
+
       if (!url) {
         return res.status(400).json({ error: 'URL is required' });
       }
@@ -73,7 +73,7 @@ const crawlerController = {
       // Get selectors from template or use custom
       let selectors = customSelectors || {};
       let shouldUsePuppeteer = usePuppeteer;
-      
+
       if (template && templates[template]) {
         selectors = templates[template].selectors;
         shouldUsePuppeteer = templates[template].usePuppeteer;
@@ -81,36 +81,37 @@ const crawlerController = {
 
       // Create job
       const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      jobStore.set(jobId, { 
-        status: 'processing', 
-        startedAt: new Date().toISOString() 
+      jobStore.set(jobId, {
+        status: 'processing',
+        startedAt: new Date().toISOString(),
       });
 
       // Start crawling (async)
-      crawlerService[shouldUsePuppeteer ? 'crawlWithPuppeteer' : 'crawlWithCheerio'](url, selectors)
+      crawlerService[
+        shouldUsePuppeteer ? 'crawlWithPuppeteer' : 'crawlWithCheerio'
+      ](url, selectors)
         .then(result => {
           const npsData = crawlerService.transformToNPSFormat(result);
           jobStore.set(jobId, {
             status: 'completed',
             result,
             npsData,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
           });
         })
         .catch(error => {
           jobStore.set(jobId, {
             status: 'failed',
             error: error.message,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
           });
         });
 
-      res.json({ 
-        jobId, 
+      res.json({
+        jobId,
         message: 'Crawl job started',
-        status: 'processing'
+        status: 'processing',
       });
-
     } catch (error) {
       console.error('Crawl error:', error);
       res.status(500).json({ error: error.message });
@@ -121,7 +122,7 @@ const crawlerController = {
   async crawlBatch(req, res) {
     try {
       const { jobs } = req.body;
-      
+
       if (!jobs || !Array.isArray(jobs)) {
         return res.status(400).json({ error: 'Jobs array is required' });
       }
@@ -130,12 +131,14 @@ const crawlerController = {
       const preparedJobs = jobs.map(job => ({
         ...job,
         id: `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        selectors: job.template && templates[job.template] 
-          ? templates[job.template].selectors 
-          : job.selectors || {},
-        usePuppeteer: job.template && templates[job.template]
-          ? templates[job.template].usePuppeteer
-          : job.usePuppeteer || false
+        selectors:
+          job.template && templates[job.template]
+            ? templates[job.template].selectors
+            : job.selectors || {},
+        usePuppeteer:
+          job.template && templates[job.template]
+            ? templates[job.template].usePuppeteer
+            : job.usePuppeteer || false,
       }));
 
       // Store batch job
@@ -143,32 +146,32 @@ const crawlerController = {
       jobStore.set(batchId, {
         status: 'processing',
         jobs: preparedJobs.map(j => j.id),
-        startedAt: new Date().toISOString()
+        startedAt: new Date().toISOString(),
       });
 
       // Start crawling
-      crawlerService.crawlMultiple(preparedJobs)
+      crawlerService
+        .crawlMultiple(preparedJobs)
         .then(results => {
           jobStore.set(batchId, {
             status: 'completed',
             results,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
           });
         })
         .catch(error => {
           jobStore.set(batchId, {
             status: 'failed',
             error: error.message,
-            completedAt: new Date().toISOString()
+            completedAt: new Date().toISOString(),
           });
         });
 
       res.json({
         batchId,
         message: `Batch crawl started with ${preparedJobs.length} jobs`,
-        status: 'processing'
+        status: 'processing',
       });
-
     } catch (error) {
       console.error('Batch crawl error:', error);
       res.status(500).json({ error: error.message });
@@ -181,12 +184,12 @@ const crawlerController = {
       id: key,
       name: value.name,
       usePuppeteer: value.usePuppeteer,
-      selectors: value.selectors
+      selectors: value.selectors,
     }));
 
     res.json({
       templates: templateList,
-      total: templateList.length
+      total: templateList.length,
     });
   },
 
@@ -194,12 +197,14 @@ const crawlerController = {
   async testCrawler(req, res) {
     try {
       const { url, selectors = {}, usePuppeteer = false } = req.body;
-      
+
       if (!url) {
         return res.status(400).json({ error: 'URL is required' });
       }
 
-      const result = await crawlerService[usePuppeteer ? 'crawlWithPuppeteer' : 'crawlWithCheerio'](url, selectors);
+      const result = await crawlerService[
+        usePuppeteer ? 'crawlWithPuppeteer' : 'crawlWithCheerio'
+      ](url, selectors);
       const npsData = crawlerService.transformToNPSFormat(result);
 
       res.json({
@@ -207,9 +212,8 @@ const crawlerController = {
         rawData: result.data,
         transformedData: npsData,
         recordsFound: npsData.length,
-        timestamp: result.timestamp
+        timestamp: result.timestamp,
       });
-
     } catch (error) {
       console.error('Test crawl error:', error);
       res.status(500).json({ error: error.message });
@@ -219,7 +223,7 @@ const crawlerController = {
   // Get job status
   getJobStatus(req, res) {
     const { jobId } = req.params;
-    
+
     if (!jobStore.has(jobId)) {
       return res.status(404).json({ error: 'Job not found' });
     }
@@ -245,20 +249,20 @@ const crawlerController = {
           data: result.data,
           totalRecords: result.totalRecords,
           columns: result.columns,
-          timestamp: result.timestamp
+          timestamp: result.timestamp,
         });
       } else {
         res.status(400).json({
           success: false,
           error: result.error,
-          timestamp: result.timestamp
+          timestamp: result.timestamp,
         });
       }
     } catch (error) {
       console.error('CSV processing error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        error: error.message 
+        error: error.message,
       });
     }
   },
@@ -279,13 +283,13 @@ const crawlerController = {
         data: result.data,
         totalRecords: result.totalRecords,
         filesProcessed: result.filesProcessed,
-        timestamp: result.timestamp
+        timestamp: result.timestamp,
       });
     } catch (error) {
       console.error('Batch CSV processing error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        error: error.message 
+        error: error.message,
       });
     }
   },
@@ -294,7 +298,7 @@ const crawlerController = {
   async processCSVFromURL(req, res) {
     try {
       const { url } = req.body;
-      
+
       if (!url) {
         return res.status(400).json({ error: 'URL is required' });
       }
@@ -309,24 +313,24 @@ const crawlerController = {
           totalRecords: result.totalRecords,
           columns: result.columns,
           sourceUrl: url,
-          timestamp: result.timestamp
+          timestamp: result.timestamp,
         });
       } else {
         res.status(400).json({
           success: false,
           error: result.error,
           sourceUrl: url,
-          timestamp: result.timestamp
+          timestamp: result.timestamp,
         });
       }
     } catch (error) {
       console.error('CSV URL processing error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        error: error.message 
+        error: error.message,
       });
     }
-  }
+  },
 };
 
-export default crawlerController; 
+export default crawlerController;

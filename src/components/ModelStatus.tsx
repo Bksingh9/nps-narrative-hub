@@ -6,7 +6,7 @@ export function ModelStatus() {
   const [modelInfo, setModelInfo] = useState({
     current: '',
     status: 'loading',
-    message: ''
+    message: '',
   });
 
   useEffect(() => {
@@ -14,10 +14,10 @@ export function ModelStatus() {
     if (config) {
       const parsed = JSON.parse(config);
       const model = parsed.model || 'gpt-3.5-turbo';
-      
+
       let status = 'active';
       let message = '';
-      
+
       if (model === 'gpt-4-turbo-preview') {
         message = 'Most Advanced Model (O3 coming soon)';
       } else if (model === 'gpt-4') {
@@ -28,11 +28,11 @@ export function ModelStatus() {
         status = 'future';
         message = 'O3 - Not Yet Available';
       }
-      
+
       setModelInfo({
         current: model,
         status,
-        message
+        message,
       });
     }
   }, []);
@@ -43,11 +43,16 @@ export function ModelStatus() {
       <div className="flex flex-col">
         <span className="text-xs font-medium">AI Model</span>
         <div className="flex items-center gap-2">
-          <Badge variant={modelInfo.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+          <Badge
+            variant={modelInfo.status === 'active' ? 'default' : 'secondary'}
+            className="text-xs"
+          >
             {modelInfo.current}
           </Badge>
           {modelInfo.message && (
-            <span className="text-xs text-muted-foreground">{modelInfo.message}</span>
+            <span className="text-xs text-muted-foreground">
+              {modelInfo.message}
+            </span>
           )}
         </div>
       </div>
@@ -58,4 +63,4 @@ export function ModelStatus() {
       )}
     </div>
   );
-} 
+}
