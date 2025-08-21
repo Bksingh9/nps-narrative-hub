@@ -61,7 +61,7 @@ export function loadExactCSVData() {
     console.log('Sample record:', data[0]);
 
     // Save to localStorage
-    localStorage.setItem('nps-records', JSON.stringify(data));
+    localStorage.setItem('nps-records', JSON.stringify(data?.slice(0, 500)));
 
     // Dispatch events
     window.dispatchEvent(

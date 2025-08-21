@@ -8,7 +8,7 @@ export function safeGetRecords(): any[] {
 
 export function setRecords(rows: any[]) {
   try {
-    localStorage.setItem('nps-records', JSON.stringify(rows));
+    localStorage.setItem('nps-records', JSON.stringify(rows?.slice(0, 500)));
   } catch {}
   window.dispatchEvent(
     new CustomEvent('nps-data-updated', { detail: { records: rows.length } })

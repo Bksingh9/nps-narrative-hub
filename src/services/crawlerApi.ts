@@ -157,7 +157,10 @@ class CrawlerAPI {
 
     // Combine and save
     const allRecords = [...existingRecords, ...normalizedData];
-    localStorage.setItem('nps-records', JSON.stringify(allRecords));
+    localStorage.setItem(
+      'nps-records',
+      JSON.stringify(allRecords?.slice(0, 500))
+    );
 
     // Dispatch event to update UI
     window.dispatchEvent(

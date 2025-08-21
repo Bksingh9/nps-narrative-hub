@@ -125,6 +125,37 @@ export default function Upload() {
     setUploadMessage('Processing CSV file...');
 
     try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch(
+        'http://localhost:3001/api/crawler/csv/upload-realtime',
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        setUploadStatus('success');
+
+        toast.success(`Successfully loaded ${result.totalRecords} records!`);
+
+        // Dispatch event to update dashboard
+        window.dispatchEvent(
+          new CustomEvent('nps-data-updated', {
+            detail: {
+              records: result.totalRecords,
+              aggregates: result.aggregates,
+            },
+          })
+        );
+      } else {
+        setUploadStatus('error');
+        toast.error(result.error || 'Failed to upload CSV');
+      }
       Papa.parse(selectedFile, {
         header: true,
         skipEmptyLines: true,
@@ -159,7 +190,13 @@ export default function Upload() {
               detractors: processed.filter(r => extractScore(r) <= 6).length,
             });
 
-            toast.success('CSV processed successfully');
+            toast.success(
+              'CSV processed successfully. Redirecting to dashboard...'
+            );
+            // Navigate to dashboard after 1 seconds
+            setTimeout(() => {
+              navigate('/');
+            }, 1000);
           } catch (error: any) {
             setUploadStatus('error');
             setUploadMessage('Failed to process CSV data');
@@ -280,7 +317,7 @@ export default function Upload() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                    <CardTitle className="text-sm font-medium text-muted-foreground text-left">
                       NPS Score
                     </CardTitle>
                   </CardHeader>
@@ -296,7 +333,7 @@ export default function Upload() {
 
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                    <CardTitle className="text-sm font-medium text-muted-foreground text-left">
                       Total Responses
                     </CardTitle>
                   </CardHeader>
@@ -312,7 +349,7 @@ export default function Upload() {
 
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                    <CardTitle className="text-sm font-medium text-muted-foreground text-left">
                       Promoters
                     </CardTitle>
                   </CardHeader>
@@ -336,7 +373,7 @@ export default function Upload() {
 
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                    <CardTitle className="text-sm font-medium text-muted-foreground text-left">
                       Detractors
                     </CardTitle>
                   </CardHeader>

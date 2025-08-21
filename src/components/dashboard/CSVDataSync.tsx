@@ -35,7 +35,10 @@ export function CSVDataSync({ onDataLoaded }: CSVDataSyncProps) {
 
         if (dataResult.success && dataResult.data) {
           // Store in localStorage for other components
-          localStorage.setItem('nps-records', JSON.stringify(dataResult.data));
+          localStorage.setItem(
+            'nps-records',
+            JSON.stringify(dataResult.data?.slice(0, 500))
+          );
 
           // Dispatch event to update UI
           window.dispatchEvent(

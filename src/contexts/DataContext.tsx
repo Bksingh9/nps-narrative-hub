@@ -64,7 +64,7 @@ interface DataContextType {
 
   // Actions
   setRawData: (data: NPSRecord[]) => void;
-  applyFilters: (newFilters: Filters) => Promise<void>;
+  applyFilters: (newFilters: Filters) => Promise<any>;
   clearFilters: () => void;
   refreshData: () => Promise<void>;
   saveToLocalStorage: () => void;
@@ -193,10 +193,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const saveToLocalStorage = () => {
     try {
       // Save raw data
-      localStorage.setItem('nps-records', JSON.stringify(rawData));
+      localStorage.setItem(
+        'nps-records',
+        JSON.stringify(rawData?.slice(0, 500))
+      );
 
+      console.log('filteredData', filteredData);
       // Save filtered data
-      localStorage.setItem('nps-filtered-data', JSON.stringify(filteredData));
+      localStorage.setItem(
+        'nps-filtered-data',
+        JSON.stringify(filteredData)?.slice(0, 500)
+      );
 
       // Save aggregates
       if (aggregates) {
@@ -351,11 +358,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loadFilterOptions = async () => {
-    /* placeholder to satisfy TS after function additions */
+  const loadFilterOptions = async (currentFilters?: Filters) => {
     try {
+      const params = new URLSearchParams();
+      if (currentFilters?.state && currentFilters.state !== 'all') {
+        params.append('state', currentFilters.state);
+      }
+      if (currentFilters?.city && currentFilters.city !== 'all') {
+        params.append('city', currentFilters.city);
+      }
+      if (currentFilters?.region && currentFilters.region !== 'all') {
+        params.append('region', currentFilters.region);
+      }
+
       const response = await fetch(
-        'http://localhost:3001/api/crawler/csv/filter-options'
+        `http://localhost:3001/api/crawler/csv/filter-options?${params.toString()}`
       );
       const result = await response.json();
 
@@ -454,7 +471,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } as Aggregates;
   };
 
-  const applyFiltersInternal = async (newFilters: Filters): Promise<void> => {
+  const applyFiltersInternal = async (newFilters: Filters): Promise<any> => {
     setIsLoading(true);
     setFilters(newFilters);
 
@@ -502,8 +519,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
           // Save filters to localStorage
           localStorage.setItem('nps-filters', JSON.stringify(newFilters));
           saveToLocalStorage();
+
+          // Reload filter options with new filters
+          await loadFilterOptions(newFilters);
+
           setIsLoading(false);
-          return;
+          return result; // Return the result
         }
       }
     } catch (error) {
@@ -549,42 +570,90 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     if (newFilters.storeCode && newFilters.storeCode !== 'all') {
       filtered = filtered.filter(record => {
-        const storeCode =
-          record.storeCode || record['Store Code'] || record['Store No'];
+        const storeCode = record.storeCode || record['Store Code'];
         return storeCode === newFilters.storeCode;
       });
     }
 
-    if (newFilters.npsCategory && newFilters.npsCategory !== 'all') {
+    if (newFilters.storeNo) {
       filtered = filtered.filter(record => {
-        const score =
-          record.npsScore ||
-          record['NPS Score'] ||
-          record[
-            'On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'
-          ];
-        const nps = typeof score === 'number' ? score : parseInt(score || '0');
+        const storeNo = record.storeNo || record['Store No'];
+        return storeNo?.toString().includes(newFilters.storeNo);
+      });
+    }
 
-        if (newFilters.npsCategory === 'Promoter') return nps >= 9;
-        if (newFilters.npsCategory === 'Passive') return nps >= 7 && nps < 9;
-        if (newFilters.npsCategory === 'Detractor') return nps < 7;
-        return true;
+    if (newFilters.format && newFilters.format !== 'all') {
+      filtered = filtered.filter(record => {
+        const format = record.format || record['Format'];
+        return format?.toLowerCase() === newFilters.format.toLowerCase();
+      });
+    }
+
+    if (newFilters.subFormat && newFilters.subFormat !== 'all') {
+      filtered = filtered.filter(record => {
+        const subFormat = record.subFormat || record['Sub Format'];
+        return subFormat?.toLowerCase() === newFilters.subFormat.toLowerCase();
       });
     }
 
     if (newFilters.searchText) {
       const searchLower = newFilters.searchText.toLowerCase();
-      filtered = filtered.filter(record =>
-        JSON.stringify(record).toLowerCase().includes(searchLower)
-      );
+      filtered = filtered.filter(record => {
+        const comments = record.comments || record['Any other feedback?'];
+        return comments?.toLowerCase().includes(searchLower);
+      });
     }
 
-    setFilteredData(filtered);
-    setAggregates(calculateAggregates(filtered));
+    if (newFilters.npsCategory && newFilters.npsCategory !== 'all') {
+      filtered = filtered.filter(record => {
+        const npsScore = record.npsScore || record['NPS Score'];
+        if (!npsScore) return false;
 
-    toast.success(`Filters applied: ${filtered.length} records found`);
-    setIsLoading(false);
+        switch (newFilters.npsCategory) {
+          case 'Promoter':
+            return npsScore >= 9;
+          case 'Passive':
+            return npsScore >= 7 && npsScore < 9;
+          case 'Detractor':
+            return npsScore < 7;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Calculate aggregates for filtered data
+    const aggregates = calculateAggregates(filtered);
+
+    setFilteredData(filtered);
+    setAggregates(aggregates);
+
+    // Broadcast filter update
+    window.dispatchEvent(
+      new CustomEvent('filters-applied', {
+        detail: {
+          filters: newFilters,
+          totalRecords: filtered.length,
+          aggregates: aggregates,
+        },
+      })
+    );
+
+    // Save filters to localStorage
+    localStorage.setItem('nps-filters', JSON.stringify(newFilters));
     saveToLocalStorage();
+
+    // Reload filter options with new filters
+    await loadFilterOptions(newFilters);
+
+    setIsLoading(false);
+
+    // Return local result
+    return {
+      success: true,
+      data: filtered,
+      aggregates: aggregates,
+    };
   };
 
   // Use the internal function directly as applyFilters

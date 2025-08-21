@@ -25,6 +25,18 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useData } from '@/contexts/DataContext';
 
+interface Store {
+  code: string;
+  name: string;
+}
+
+interface HierarchicalOptions {
+  states: string[];
+  cities: string[];
+  regions: string[];
+  stores: Store[];
+}
+
 export function GlobalFilterBar() {
   const {
     filters: activeFilters,
@@ -50,6 +62,56 @@ export function GlobalFilterBar() {
     searchText: activeFilters.searchText || '',
   });
 
+  // State for hierarchical filter options
+  const [hierarchicalOptions, setHierarchicalOptions] =
+    useState<HierarchicalOptions>({
+      states: filterOptions.states,
+      cities: filterOptions.cities,
+      regions: filterOptions.regions,
+      stores: (filterOptions.stores as string[]).map(store => ({
+        code: store,
+        name: store,
+      })),
+    });
+
+  // State to track if date range is auto-updated
+  const [isDateRangeAutoUpdated, setIsDateRangeAutoUpdated] = useState(false);
+
+  // State to track if there are pending filter changes
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+
+  // Load hierarchical filter options
+  const loadHierarchicalOptions = async (currentFilters: any) => {
+    try {
+      const params = new URLSearchParams();
+      if (currentFilters.state && currentFilters.state !== 'all') {
+        params.append('state', currentFilters.state);
+      }
+      if (currentFilters.city && currentFilters.city !== 'all') {
+        params.append('city', currentFilters.city);
+      }
+      if (currentFilters.region && currentFilters.region !== 'all') {
+        params.append('region', currentFilters.region);
+      }
+
+      const response = await fetch(
+        `http://localhost:3001/api/crawler/csv/filter-options?${params.toString()}`
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        setHierarchicalOptions({
+          states: result.states || [],
+          cities: result.cities || [],
+          regions: result.regions || [],
+          stores: result.stores || [],
+        });
+      }
+    } catch (error) {
+      console.error('Error loading hierarchical options:', error);
+    }
+  };
+
   // Sync with active filters from context
   useEffect(() => {
     setFilters({
@@ -72,6 +134,9 @@ export function GlobalFilterBar() {
         to: activeFilters.dateTo ? new Date(activeFilters.dateTo) : undefined,
       });
     }
+
+    // Load hierarchical options when active filters change
+    loadHierarchicalOptions(activeFilters);
   }, [activeFilters]);
 
   const handleApplyFilters = async () => {
@@ -93,12 +158,77 @@ export function GlobalFilterBar() {
       }
     });
 
-    await applyFilters(newFilters);
+    console.log('Applying filters:', newFilters);
+    const result = await applyFilters(newFilters);
+
+    // Clear pending changes flag
+    setHasPendingChanges(false);
+
+    // Auto-update date range based on filtered data if state or city is selected
+    if (
+      (filters.state && filters.state !== 'all') ||
+      (filters.city && filters.city !== 'all')
+    ) {
+      if (result && result.success && result.aggregates?.dateRange) {
+        const newDateRange = {
+          from: result.aggregates.dateRange.from
+            ? new Date(result.aggregates.dateRange.from)
+            : undefined,
+          to: result.aggregates.dateRange.to
+            ? new Date(result.aggregates.dateRange.to)
+            : undefined,
+        };
+        console.log('Auto-updating date range to:', newDateRange);
+        setDateRange(newDateRange);
+
+        // Show auto-update indicator
+        setIsDateRangeAutoUpdated(true);
+        setTimeout(() => setIsDateRangeAutoUpdated(false), 3000); // Clear after 3 seconds
+      }
+    }
+  };
+
+  // Handle filter changes with hierarchical reset
+  const handleFilterChange = async (filterKey: string, value: string) => {
+    console.log('handleFilterChange called with:', filterKey, value);
+    const newFilters = { ...filters, [filterKey]: value };
+
+    // Reset dependent filters when parent filter changes
+    if (filterKey === 'state') {
+      newFilters.city = 'all';
+      newFilters.region = 'all';
+      newFilters.storeCode = 'all';
+    } else if (filterKey === 'city') {
+      newFilters.storeCode = 'all';
+    } else if (filterKey === 'region') {
+      newFilters.storeCode = 'all';
+    }
+
+    setFilters(newFilters);
+    setHasPendingChanges(true); // Mark that there are pending changes
+
+    // Load updated hierarchical options
+    await loadHierarchicalOptions(newFilters);
+  };
+
+  // Handle date range changes
+  const handleDateRangeChange = (newDateRange: DateRange | undefined) => {
+    console.log('handleDateRangeChange called with:', newDateRange);
+
+    // Clear auto-update indicator when manually changing date range
+    setIsDateRangeAutoUpdated(false);
+
+    // Update state only
+    setDateRange(newDateRange);
+    setHasPendingChanges(true); // Mark that there are pending changes
   };
 
   const handleClearFilters = () => {
+    console.log('Clearing all filters');
     setDateRange(undefined);
-    setFilters({
+    setIsDateRangeAutoUpdated(false);
+    setHasPendingChanges(false);
+    const clearedFilters = {
       state: 'all',
       city: 'all',
       region: 'all',
@@ -108,16 +238,27 @@ export function GlobalFilterBar() {
       subFormat: 'all',
       npsCategory: 'all',
       searchText: '',
-    });
-    clearFilters();
+    };
+    setFilters(clearedFilters);
+
+    // Reset hierarchical options to show all options
+    loadHierarchicalOptions(clearedFilters);
   };
 
   const getActiveFilterCount = () => {
     let count = 0;
-    if (dateRange?.from || dateRange?.to) count++;
-    Object.values(filters).forEach(value => {
-      if (value && value !== 'all' && value !== '') count++;
-    });
+    // Only count filters that are actually applied (from activeFilters context)
+    if (activeFilters.dateFrom || activeFilters.dateTo) count++;
+    if (activeFilters.state && activeFilters.state !== 'all') count++;
+    if (activeFilters.city && activeFilters.city !== 'all') count++;
+    if (activeFilters.region && activeFilters.region !== 'all') count++;
+    if (activeFilters.storeCode && activeFilters.storeCode !== 'all') count++;
+    if (activeFilters.storeNo) count++;
+    if (activeFilters.format && activeFilters.format !== 'all') count++;
+    if (activeFilters.subFormat && activeFilters.subFormat !== 'all') count++;
+    if (activeFilters.npsCategory && activeFilters.npsCategory !== 'all')
+      count++;
+    if (activeFilters.searchText) count++;
     return count;
   };
 
@@ -181,7 +322,9 @@ export function GlobalFilterBar() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Date Range */}
           <div className="space-y-2 col-span-2">
-            <Label>Date Range</Label>
+            <div className="flex items-center gap-2 space-y-2">
+              <Label className="w-full pb-[10px]">Date Range</Label>
+            </div>
             <div className="flex gap-2">
               <Popover>
                 <PopoverTrigger asChild>
@@ -203,7 +346,7 @@ export function GlobalFilterBar() {
                     mode="single"
                     selected={dateRange?.from}
                     onSelect={date =>
-                      setDateRange({ ...dateRange, from: date })
+                      handleDateRangeChange({ ...dateRange, from: date })
                     }
                     initialFocus
                   />
@@ -227,7 +370,9 @@ export function GlobalFilterBar() {
                   <Calendar
                     mode="single"
                     selected={dateRange?.to}
-                    onSelect={date => setDateRange({ ...dateRange, to: date })}
+                    onSelect={date =>
+                      handleDateRangeChange({ ...dateRange, to: date })
+                    }
                     initialFocus
                   />
                 </PopoverContent>
@@ -240,14 +385,14 @@ export function GlobalFilterBar() {
             <Label htmlFor="state">State</Label>
             <Select
               value={filters.state}
-              onValueChange={value => setFilters({ ...filters, state: value })}
+              onValueChange={value => handleFilterChange('state', value)}
             >
               <SelectTrigger id="state">
                 <SelectValue placeholder="All States" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All States</SelectItem>
-                {filterOptions.states.map(state => (
+                {hierarchicalOptions.states.map(state => (
                   <SelectItem key={state} value={state}>
                     {state}
                   </SelectItem>
@@ -261,14 +406,21 @@ export function GlobalFilterBar() {
             <Label htmlFor="city">City</Label>
             <Select
               value={filters.city}
-              onValueChange={value => setFilters({ ...filters, city: value })}
+              onValueChange={value => handleFilterChange('city', value)}
+              disabled={filters.state === 'all'}
             >
               <SelectTrigger id="city">
-                <SelectValue placeholder="All Cities" />
+                <SelectValue
+                  placeholder={
+                    filters.state === 'all'
+                      ? 'Select State First'
+                      : 'All Cities'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Cities</SelectItem>
-                {filterOptions.cities.map(city => (
+                {hierarchicalOptions.cities.map(city => (
                   <SelectItem key={city} value={city}>
                     {city}
                   </SelectItem>
@@ -282,18 +434,29 @@ export function GlobalFilterBar() {
             <Label htmlFor="store">Store</Label>
             <Select
               value={filters.storeCode}
-              onValueChange={value =>
-                setFilters({ ...filters, storeCode: value })
+              onValueChange={value => handleFilterChange('storeCode', value)}
+              disabled={
+                filters.state === 'all' &&
+                filters.city === 'all' &&
+                filters.region === 'all'
               }
             >
               <SelectTrigger id="store">
-                <SelectValue placeholder="All Stores" />
+                <SelectValue
+                  placeholder={
+                    filters.state === 'all' &&
+                    filters.city === 'all' &&
+                    filters.region === 'all'
+                      ? 'Select Location First'
+                      : 'All Stores'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Stores</SelectItem>
-                {filterOptions.stores.map(store => (
-                  <SelectItem key={store} value={store}>
-                    {store}
+                {hierarchicalOptions.stores.map(store => (
+                  <SelectItem key={store.code} value={store.code}>
+                    {store.code} - {store.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -305,14 +468,21 @@ export function GlobalFilterBar() {
             <Label htmlFor="region">Region</Label>
             <Select
               value={filters.region}
-              onValueChange={value => setFilters({ ...filters, region: value })}
+              onValueChange={value => handleFilterChange('region', value)}
+              disabled={filters.state === 'all'}
             >
               <SelectTrigger id="region">
-                <SelectValue placeholder="All Regions" />
+                <SelectValue
+                  placeholder={
+                    filters.state === 'all'
+                      ? 'Select State First'
+                      : 'All Regions'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Regions</SelectItem>
-                {filterOptions.regions.map(region => (
+                {hierarchicalOptions.regions.map(region => (
                   <SelectItem key={region} value={region}>
                     {region}
                   </SelectItem>
@@ -370,7 +540,7 @@ export function GlobalFilterBar() {
               {isLoading ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Loading...
+                  Applying...
                 </>
               ) : (
                 <>

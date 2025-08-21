@@ -543,14 +543,14 @@ class CSVProcessor {
       );
     }
 
-    // State filter
+    // State filter (case-insensitive)
     if (filters.state && filters.state !== 'all') {
       filtered = filtered.filter(
         record => record.state?.toLowerCase() === filters.state.toLowerCase()
       );
     }
 
-    // Store code filter
+    // Store code filter (case-insensitive)
     if (filters.storeCode && filters.storeCode !== 'all') {
       filtered = filtered.filter(
         record =>
@@ -558,7 +558,7 @@ class CSVProcessor {
       );
     }
 
-    // Region filter
+    // Region filter (case-insensitive)
     if (filters.region && filters.region !== 'all') {
       filtered = filtered.filter(
         record =>
@@ -567,7 +567,7 @@ class CSVProcessor {
       );
     }
 
-    // City filter
+    // City filter (case-insensitive)
     if (filters.city && filters.city !== 'all') {
       filtered = filtered.filter(
         record =>
