@@ -84,15 +84,12 @@ export function GlobalFilterBar() {
   const loadHierarchicalOptions = async (currentFilters: any) => {
     try {
       const params = new URLSearchParams();
-      if (currentFilters.state && currentFilters.state !== 'all') {
-        params.append('state', currentFilters.state);
-      }
-      if (currentFilters.city && currentFilters.city !== 'all') {
-        params.append('city', currentFilters.city);
-      }
-      if (currentFilters.region && currentFilters.region !== 'all') {
-        params.append('region', currentFilters.region);
-      }
+      ['state', 'city', 'region', 'storeCode', 'format', 'subFormat'].forEach(
+        key => {
+          const v = currentFilters[key];
+          if (v && v !== 'all') params.append(key, v);
+        }
+      );
 
       const response = await fetch(
         `http://localhost:3001/api/crawler/csv/filter-options?${params.toString()}`
@@ -407,13 +404,12 @@ export function GlobalFilterBar() {
             <Select
               value={filters.city}
               onValueChange={value => handleFilterChange('city', value)}
-              disabled={filters.state === 'all'}
             >
               <SelectTrigger id="city">
                 <SelectValue
                   placeholder={
                     filters.state === 'all'
-                      ? 'Select State First'
+                      ? 'All Cities'
                       : 'All Cities'
                   }
                 />
@@ -435,21 +431,10 @@ export function GlobalFilterBar() {
             <Select
               value={filters.storeCode}
               onValueChange={value => handleFilterChange('storeCode', value)}
-              disabled={
-                filters.state === 'all' &&
-                filters.city === 'all' &&
-                filters.region === 'all'
-              }
             >
               <SelectTrigger id="store">
                 <SelectValue
-                  placeholder={
-                    filters.state === 'all' &&
-                    filters.city === 'all' &&
-                    filters.region === 'all'
-                      ? 'Select Location First'
-                      : 'All Stores'
-                  }
+                  placeholder={'All Stores'}
                 />
               </SelectTrigger>
               <SelectContent>
@@ -469,13 +454,12 @@ export function GlobalFilterBar() {
             <Select
               value={filters.region}
               onValueChange={value => handleFilterChange('region', value)}
-              disabled={filters.state === 'all'}
             >
               <SelectTrigger id="region">
                 <SelectValue
                   placeholder={
                     filters.state === 'all'
-                      ? 'Select State First'
+                      ? 'All Regions'
                       : 'All Regions'
                   }
                 />

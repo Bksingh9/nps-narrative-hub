@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { HeaderBar } from '@/components/layout/HeaderBar';
 import { SideNav } from '@/components/layout/SideNav';
-import { DriverPanel } from '@/components/dashboard/DriverPanel';
+// import { DriverPanel } from '@/components/dashboard/DriverPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,7 @@ export default function Drivers() {
           </div>
 
           {/* Main Driver Panel */}
-          <DriverPanel />
+          {/* <DriverPanel /> */}
 
           {/* Empty state for detailed driver analysis */}
           <div className="grid grid-cols-1">

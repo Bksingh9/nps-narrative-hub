@@ -167,7 +167,7 @@ router.get('/csv/filter-options', (req, res) => {
   }
 
   // Get current filters from query params for hierarchical filtering
-  const { state, city, region } = req.query;
+  const { state, city, region, storeCode, format, subFormat } = req.query;
 
   // Start with all data
   let filteredData = [...csvDataStore.data];
@@ -191,99 +191,94 @@ router.get('/csv/filter-options', (req, res) => {
     );
   }
 
-  // Extract unique values for filters with case-sensitive deduplication
+  if (storeCode && storeCode !== 'all') {
+    filteredData = filteredData.filter(
+      record => String(record.storeCode) === String(storeCode)
+    );
+  }
+
+  if (format && format !== 'all') {
+    filteredData = filteredData.filter(record => record['Format'] === format);
+  }
+
+  if (subFormat && subFormat !== 'all') {
+    filteredData = filteredData.filter(
+      record => record['Sub Format'] === subFormat
+    );
+  }
+
+  // Extract unique values for filters with case-insensitive deduplication from filtered subset
   const states = (() => {
-    const seen = new Map(); // Map to store lowercase -> original case
-    for (const item of csvDataStore.data.map(d => d.state).filter(Boolean)) {
-      const lower = item.toLowerCase();
-      if (!seen.has(lower)) {
-        seen.set(lower, item);
-      }
+    const seen = new Map();
+    for (const item of filteredData.map(d => d.state).filter(Boolean)) {
+      const lower = String(item).toLowerCase();
+      if (!seen.has(lower)) seen.set(lower, item);
     }
     return Array.from(seen.values()).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: 'base' })
+      String(a).localeCompare(String(b), undefined, { sensitivity: 'base' })
     );
   })();
 
-  const storesMap = new Map();
-  csvDataStore.data.forEach(d => {
-    if (d.storeCode) {
-      storesMap.set(d.storeCode, {
-        code: d.storeCode,
-        name: d.storeName || d.storeCode,
-        state: d.state,
-        city: d.city,
-        region: d.region,
-      });
-    }
-  });
-  const stores = Array.from(storesMap.values()).sort((a, b) =>
-    a.code.localeCompare(b.code, undefined, { sensitivity: 'base' })
-  );
-
-  // Extract regions and cities from filtered data for hierarchical filtering
-  // Use case-insensitive deduplication to remove duplicates like "MUMBAI" and "Mumbai"
   const regions = (() => {
-    const seen = new Map(); // Map to store lowercase -> original case
+    const seen = new Map();
     for (const item of filteredData
       .map(d => d.region || d['Region Code'])
       .filter(Boolean)) {
-      const lower = item.toLowerCase();
-      if (!seen.has(lower)) {
-        seen.set(lower, item);
-      }
+      const lower = String(item).toLowerCase();
+      if (!seen.has(lower)) seen.set(lower, item);
     }
     return Array.from(seen.values()).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: 'base' })
+      String(a).localeCompare(String(b), undefined, { sensitivity: 'base' })
     );
   })();
 
   const cities = (() => {
-    const seen = new Map(); // Map to store lowercase -> original case
-    for (const item of filteredData
-      .map(d => d.city || d['City'])
-      .filter(Boolean)) {
-      const lower = item.toLowerCase();
-      if (!seen.has(lower)) {
-        seen.set(lower, item);
-      }
+    const seen = new Map();
+    for (const item of filteredData.map(d => d.city || d['City']).filter(Boolean)) {
+      const lower = String(item).toLowerCase();
+      if (!seen.has(lower)) seen.set(lower, item);
     }
     return Array.from(seen.values()).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: 'base' })
+      String(a).localeCompare(String(b), undefined, { sensitivity: 'base' })
     );
   })();
 
-  const formats = [...new Set(csvDataStore.data.map(d => d['Format']))]
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const stores = (() => {
+    const map = new Map();
+    filteredData.forEach(d => {
+      if (d.storeCode) {
+        map.set(d.storeCode, {
+          code: d.storeCode,
+          name: d.storeName || d.storeCode,
+          state: d.state,
+          city: d.city,
+          region: d.region,
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) =>
+      String(a.code).localeCompare(String(b.code), undefined, { sensitivity: 'base' })
+    );
+  })();
 
-  const subFormats = [...new Set(csvDataStore.data.map(d => d['Sub Format']))]
+  const formats = Array.from(
+    new Set(filteredData.map(d => d['Format']))
+  )
     .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    .sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
+
+  const subFormats = Array.from(
+    new Set(filteredData.map(d => d['Sub Format']))
+  )
+    .filter(Boolean)
+    .sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
 
   // Get hierarchical options based on current filters
   const hierarchicalOptions = {
-    states: states,
-    cities: cities,
-    regions: regions,
-    stores: (() => {
-      // Create stores from filtered data
-      const filteredStoresMap = new Map();
-      filteredData.forEach(d => {
-        if (d.storeCode) {
-          filteredStoresMap.set(d.storeCode, {
-            code: d.storeCode,
-            name: d.storeName || d.storeCode,
-            state: d.state,
-            city: d.city,
-            region: d.region,
-          });
-        }
-      });
-      return Array.from(filteredStoresMap.values()).sort((a, b) =>
-        a.code.localeCompare(b.code, undefined, { sensitivity: 'base' })
-      );
-    })(),
+    states,
+    cities,
+    regions,
+    stores,
   };
 
   res.json({

@@ -4,8 +4,6 @@ import { SideNav } from '@/components/layout/SideNav';
 import { KpiStrip } from '@/components/dashboard/KpiStrip';
 import { TrendPanel } from '@/components/dashboard/TrendPanel';
 import { StoreTable } from '@/components/dashboard/StoreTable';
-import { DriverPanel } from '@/components/dashboard/DriverPanel';
-import { AIInsightsPanel } from '@/components/dashboard/AIInsightsPanel';
 import { GlobalFilterBar } from '@/components/GlobalFilterBar';
 import CSVDataSync from '@/components/dashboard/CSVDataSync';
 import DataExportButton from '@/components/DataExportButton';
@@ -110,11 +108,11 @@ export default function Dashboard() {
 
               {/* Secondary Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Driver Panel */}
-                <DriverPanel />
+                {/* Driver Panel removed */}
+                {/* <DriverPanel /> */}
 
-                {/* AI Insights Panel */}
-                <AIInsightsPanel />
+                {/* AI Insights Panel removed */}
+                {/* <AIInsightsPanel /> */}
               </div>
             </TabsContent>
 
@@ -125,7 +123,7 @@ export default function Dashboard() {
             <TabsContent value="alerts" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <RealTimeAlerts />
-                <AIInsightsPanel />
+                {/* <AIInsightsPanel /> */}
               </div>
               <div className="mt-6">
                 <RealTimeAlerts compact={false} maxAlerts={10} />
