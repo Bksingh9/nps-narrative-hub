@@ -1,16 +1,17 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, RefreshCw, MessageSquare } from "lucide-react";
-import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Sparkles, RefreshCw, MessageSquare } from 'lucide-react';
+import { useState } from 'react';
 
 export function NarrativeCard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [narrative, setNarrative] = useState({
-    title: "AI-Generated Insights",
-    content: "Your current NPS of +42 shows strong performance, up +5.2 points from last month. Store cleanliness and staff helpfulness are your top drivers with correlations of 0.78 and 0.72. Focus attention on Tamil Nadu region where several stores show declining trends.",
-    timestamp: "Generated 2 minutes ago",
-    confidence: "94%"
+    title: 'AI-Generated Insights',
+    content:
+      'Your current NPS of +42 shows strong performance, up +5.2 points from last month. Store cleanliness and staff helpfulness are your top drivers with correlations of 0.78 and 0.72. Focus attention on Tamil Nadu region where several stores show declining trends.',
+    timestamp: 'Generated 2 minutes ago',
+    confidence: '94%',
   });
 
   const handleRegenerate = async () => {
@@ -19,9 +20,10 @@ export function NarrativeCard() {
     setTimeout(() => {
       setNarrative({
         ...narrative,
-        content: "Monthly analysis reveals sustained growth trajectory with NPS climbing +7 points over 6 months. Delhi and Karnataka markets lead performance gains. Prioritize product availability improvements in underperforming regions for maximum impact.",
-        timestamp: "Generated just now",
-        confidence: "97%"
+        content:
+          'Monthly analysis reveals sustained growth trajectory with NPS climbing +7 points over 6 months. Delhi and Karnataka markets lead performance gains. Prioritize product availability improvements in underperforming regions for maximum impact.',
+        timestamp: 'Generated just now',
+        confidence: '97%',
       });
       setIsGenerating(false);
     }, 2000);
@@ -57,7 +59,7 @@ export function NarrativeCard() {
           </Button>
         </div>
       </CardHeader>
-      
+
       <CardContent>
         <div className="space-y-4">
           {/* Main Narrative */}
@@ -65,9 +67,7 @@ export function NarrativeCard() {
             <div className="flex items-start gap-3">
               <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
               <div>
-                <p className="text-sm leading-relaxed">
-                  {narrative.content}
-                </p>
+                <p className="text-sm leading-relaxed">{narrative.content}</p>
               </div>
             </div>
           </div>

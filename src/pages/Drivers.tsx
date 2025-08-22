@@ -1,28 +1,30 @@
-import { useState } from "react";
-import { HeaderBar } from "@/components/layout/HeaderBar";
-import { SideNav } from "@/components/layout/SideNav";
-import { DriverPanel } from "@/components/dashboard/DriverPanel";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, Target, Lightbulb } from "lucide-react";
-
-
+import { useState } from 'react';
+import { HeaderBar } from '@/components/layout/HeaderBar';
+import { SideNav } from '@/components/layout/SideNav';
+// import { DriverPanel } from '@/components/dashboard/DriverPanel';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { TrendingUp, TrendingDown, Target, Lightbulb } from 'lucide-react';
 
 export default function Drivers() {
-  const [userRole] = useState<"admin" | "user" | "store_manager">("admin");
+  const [userRole] = useState<'admin' | 'user' | 'store_manager'>('admin');
 
   const handleLogout = () => {
-    console.log("Logout clicked");
+    console.log('Logout clicked');
   };
 
   const getImpactBadge = (impact: string) => {
     switch (impact) {
-      case "high":
-        return <Badge className="bg-nps-promoter/10 text-nps-promoter border-nps-promoter/20">High Impact</Badge>;
-      case "medium":
+      case 'high':
+        return (
+          <Badge className="bg-nps-promoter/10 text-nps-promoter border-nps-promoter/20">
+            High Impact
+          </Badge>
+        );
+      case 'medium':
         return <Badge variant="secondary">Medium Impact</Badge>;
-      case "low":
+      case 'low':
         return <Badge variant="outline">Low Impact</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
@@ -32,11 +34,11 @@ export default function Drivers() {
   return (
     <div className="min-h-screen bg-background">
       <HeaderBar userRole={userRole} onLogout={handleLogout} />
-      
+
       <div className="flex">
         <SideNav userRole={userRole} />
-        
-        <main className="flex-1 p-6 space-y-6 animate-fade-in">
+
+        <main className="flex-1 p-6 pr-0 space-y-6 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold">Driver Analysis</h1>
@@ -51,14 +53,15 @@ export default function Drivers() {
           </div>
 
           {/* Main Driver Panel */}
-          <DriverPanel />
+          {/* <DriverPanel /> */}
 
           {/* Empty state for detailed driver analysis */}
           <div className="grid grid-cols-1">
             <Card className="p-8 text-center">
               <Target className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">
-                No detailed driver data available. Upload NPS data with driver metrics to see category analysis.
+                No detailed driver data available. Upload NPS data with driver
+                metrics to see category analysis.
               </p>
             </Card>
           </div>
@@ -71,7 +74,7 @@ export default function Drivers() {
                 Priority Recommendations
               </CardTitle>
             </CardHeader>
-            
+
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 rounded-lg bg-nps-promoter/5 border border-nps-promoter/20">
@@ -85,7 +88,7 @@ export default function Drivers() {
                     <li>• Product knowledge workshops (r=0.68)</li>
                   </ul>
                 </div>
-                
+
                 <div className="p-4 rounded-lg bg-chart-2/5 border border-chart-2/20">
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingDown className="w-4 h-4 text-chart-2" />

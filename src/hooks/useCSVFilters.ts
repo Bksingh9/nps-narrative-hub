@@ -21,22 +21,24 @@ export function useCSVFilters() {
     states: [],
     stores: [],
     regions: [],
-    dateRange: { from: null, to: null }
+    dateRange: { from: null, to: null },
   });
   const [isLoading, setIsLoading] = useState(false);
 
   // Load filter options from backend
   const loadFilterOptions = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/crawler/csv/filter-options');
+      const response = await fetch(
+        'http://localhost:3001/api/crawler/csv/filter-options'
+      );
       const result = await response.json();
-      
+
       if (result.success) {
         setFilterOptions({
           states: result.states || [],
           stores: result.stores || [],
           regions: result.regions || [],
-          dateRange: result.dateRange || { from: null, to: null }
+          dateRange: result.dateRange || { from: null, to: null },
         });
       }
     } catch (error) {
@@ -47,29 +49,31 @@ export function useCSVFilters() {
   // Apply filters to backend
   const applyFilters = useCallback(async () => {
     setIsLoading(true);
-    
+
     const filterPayload = {
       dateFrom: filters.dateFrom?.toISOString(),
       dateTo: filters.dateTo?.toISOString(),
       state: filters.state === 'all' ? undefined : filters.state,
       storeCode: filters.storeCode === 'all' ? undefined : filters.storeCode,
-      region: filters.region === 'all' ? undefined : filters.region
+      region: filters.region === 'all' ? undefined : filters.region,
     };
-    
+
     // Clean undefined values
     Object.keys(filterPayload).forEach(key => {
       if (filterPayload[key as keyof typeof filterPayload] === undefined) {
         delete filterPayload[key as keyof typeof filterPayload];
       }
     });
-    
+
     console.log('Applying filters:', filterPayload);
-    
+
     // Dispatch custom event for CSVDataSync to handle
-    window.dispatchEvent(new CustomEvent('apply-filters', { 
-      detail: filterPayload 
-    }));
-    
+    window.dispatchEvent(
+      new CustomEvent('apply-filters', {
+        detail: filterPayload,
+      })
+    );
+
     setIsLoading(false);
   }, [filters]);
 
@@ -77,7 +81,7 @@ export function useCSVFilters() {
   const updateFilter = useCallback((key: keyof FilterOptions, value: any) => {
     setFilters(prev => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   }, []);
 
@@ -85,22 +89,24 @@ export function useCSVFilters() {
   const clearFilters = useCallback(() => {
     setFilters({});
     // Apply empty filters to get all data
-    window.dispatchEvent(new CustomEvent('apply-filters', { 
-      detail: {} 
-    }));
+    window.dispatchEvent(
+      new CustomEvent('apply-filters', {
+        detail: {},
+      })
+    );
   }, []);
 
   // Load filter options on mount
   useEffect(() => {
     loadFilterOptions();
-    
+
     // Reload filter options when data is updated
     const handleDataUpdate = () => {
       loadFilterOptions();
     };
-    
+
     window.addEventListener('nps-data-updated', handleDataUpdate);
-    
+
     return () => {
       window.removeEventListener('nps-data-updated', handleDataUpdate);
     };
@@ -113,7 +119,7 @@ export function useCSVFilters() {
         applyFilters();
       }
     }, 500); // Debounce filter changes
-    
+
     return () => clearTimeout(timer);
   }, [filters, applyFilters]);
 
@@ -124,8 +130,8 @@ export function useCSVFilters() {
     updateFilter,
     clearFilters,
     applyFilters,
-    loadFilterOptions
+    loadFilterOptions,
   };
 }
 
-export default useCSVFilters; 
+export default useCSVFilters;

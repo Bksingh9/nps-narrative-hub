@@ -1,35 +1,35 @@
-import { 
-  BarChart3, 
-  Bell, 
-  Sun, 
-  Moon, 
-  User, 
-  Settings, 
+import {
+  BarChart3,
+  Bell,
+  Sun,
+  Moon,
+  User,
+  Settings,
   LogOut,
   Wifi,
   WifiOff,
   RefreshCw,
-  CircleDot
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
+  CircleDot,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuLabel
-} from "@/components/ui/dropdown-menu";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useRealTime } from "@/contexts/RealTimeContext";
-import authService from "@/services/authService";
-import { useNavigate } from "react-router-dom";
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useRealTime } from '@/contexts/RealTimeContext';
+import authService from '@/services/authService';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderBarProps {
-  userRole: "admin" | "user" | "store_manager";
+  userRole: 'admin' | 'user' | 'store_manager';
   onLogout: () => void;
 }
 
@@ -38,13 +38,17 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
   const { config, isRefreshing, refreshData } = useRealTime();
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
-  
+
   const getUserInitials = () => {
-    if (!currentUser) return "U";
-    const names = currentUser.name.split(" ");
-    return names.map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    if (!currentUser) return 'U';
+    const names = currentUser.name.split(' ');
+    return names
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
-  
+
   const handleLogout = () => {
     authService.logout();
     onLogout();
@@ -54,7 +58,7 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
     if (isRefreshing) {
       return <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />;
     }
-    
+
     switch (config.connectionStatus) {
       case 'connected':
         return <Wifi className="w-4 h-4 text-green-400" />;
@@ -68,32 +72,32 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
   };
 
   const getStatusText = () => {
-    if (isRefreshing) return "Refreshing...";
-    
+    if (isRefreshing) return 'Refreshing...';
+
     switch (config.connectionStatus) {
       case 'connected':
-        return config.autoRefreshEnabled ? "Live" : "Connected";
+        return config.autoRefreshEnabled ? 'Live' : 'Connected';
       case 'connecting':
-        return "Connecting...";
+        return 'Connecting...';
       case 'error':
-        return "Connection Error";
+        return 'Connection Error';
       default:
-        return "Offline";
+        return 'Offline';
     }
   };
 
   const getStatusColor = () => {
-    if (isRefreshing) return "bg-blue-500";
-    
+    if (isRefreshing) return 'bg-blue-500';
+
     switch (config.connectionStatus) {
       case 'connected':
-        return config.autoRefreshEnabled ? "bg-green-500" : "bg-blue-500";
+        return config.autoRefreshEnabled ? 'bg-green-500' : 'bg-blue-500';
       case 'connecting':
-        return "bg-yellow-500";
+        return 'bg-yellow-500';
       case 'error':
-        return "bg-red-500";
+        return 'bg-red-500';
       default:
-        return "bg-gray-500";
+        return 'bg-gray-500';
     }
   };
 
@@ -104,31 +108,33 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
           <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
             <BarChart3 className="w-5 h-5 text-primary-foreground" />
           </div>
-          <div>
+          <div className="text-left">
             <h1 className="text-lg font-semibold">Reliance Trends NPS</h1>
             <p className="text-xs text-muted-foreground">Intelligence Portal</p>
           </div>
         </div>
-        
+
         {/* Real-time Status Indicator */}
         <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-card/50 border">
           <div className="flex items-center gap-2">
             {getRealTimeStatusIcon()}
             <span className="text-sm font-medium">{getStatusText()}</span>
           </div>
-          <div className={`w-2 h-2 rounded-full ${getStatusColor()} ${config.autoRefreshEnabled ? 'animate-pulse' : ''}`}></div>
+          <div
+            className={`w-2 h-2 rounded-full ${getStatusColor()} ${
+              config.autoRefreshEnabled ? 'animate-pulse' : ''
+            }`}
+          ></div>
         </div>
-        
       </div>
 
       <div className="flex items-center gap-4">
-
         {/* Theme Toggle */}
         <div className="flex items-center gap-2">
           <Sun className="w-4 h-4" />
           <Switch
-            checked={theme === "dark"}
-            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+            checked={theme === 'dark'}
+            onCheckedChange={checked => setTheme(checked ? 'dark' : 'light')}
           />
           <Moon className="w-4 h-4" />
         </div>
@@ -141,35 +147,47 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-2"
+            >
               <Avatar className="h-7 w-7">
-                <AvatarImage src={currentUser?.avatar} alt={currentUser?.name} />
+                <AvatarImage
+                  src={currentUser?.avatar}
+                  alt={currentUser?.name}
+                />
                 <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                   {getUserInitials()}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden md:inline-block">
-                {currentUser?.name || 
-                 (userRole === "admin" ? "Administrator" : 
-                  userRole === "store_manager" ? "Store Manager" : "User")}
+                {currentUser?.name ||
+                  (userRole === 'admin'
+                    ? 'Administrator'
+                    : userRole === 'store_manager'
+                      ? 'Store Manager'
+                      : 'User')}
               </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{currentUser?.name}</p>
+                <p className="text-sm font-medium leading-none">
+                  {currentUser?.name}
+                </p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {currentUser?.email}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/settings")}>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <User className="w-4 h-4 mr-2" />
               Profile Settings
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/settings")}>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <Settings className="w-4 h-4 mr-2" />
               Preferences
             </DropdownMenuItem>
@@ -184,7 +202,10 @@ export function HeaderBar({ userRole, onLogout }: HeaderBarProps) {
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-destructive"
+            >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </DropdownMenuItem>

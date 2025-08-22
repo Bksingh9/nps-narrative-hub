@@ -1,13 +1,34 @@
 import { useState, useEffect } from 'react';
-import { Bot, Globe, Loader2, CheckCircle, XCircle, AlertCircle, Download, Search } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Bot,
+  Globe,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Download,
+  Search,
+} from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { SideNav } from '@/components/layout/SideNav';
@@ -22,7 +43,9 @@ export default function Crawler() {
   const [customSelectors, setCustomSelectors] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [backendStatus, setBackendStatus] = useState<
+    'checking' | 'online' | 'offline'
+  >('checking');
   const [batchUrls, setBatchUrls] = useState('');
   const { toast } = useToast();
 
@@ -71,11 +94,13 @@ export default function Crawler() {
       const job = {
         url,
         template: selectedTemplate || undefined,
-        customSelectors: customSelectors ? JSON.parse(customSelectors) : undefined,
+        customSelectors: customSelectors
+          ? JSON.parse(customSelectors)
+          : undefined,
       };
 
       const response = await crawlerApi.crawlSingle(job);
-      
+
       toast({
         title: 'Crawl Started',
         description: `Job ID: ${response.jobId}`,
@@ -107,7 +132,7 @@ export default function Crawler() {
 
   const handleBatchCrawl = async () => {
     const urls = batchUrls.split('\n').filter(u => u.trim());
-    
+
     if (urls.length === 0) {
       toast({
         title: 'Error',
@@ -126,12 +151,11 @@ export default function Crawler() {
       }));
 
       const response = await crawlerApi.crawlBatch(jobs);
-      
+
       toast({
         title: 'Batch Crawl Started',
         description: `Processing ${urls.length} URLs`,
       });
-
     } catch (error: any) {
       toast({
         title: 'Batch Crawl Failed',
@@ -159,11 +183,13 @@ export default function Crawler() {
       const result = await crawlerApi.testCrawler({
         url,
         template: selectedTemplate || undefined,
-        customSelectors: customSelectors ? JSON.parse(customSelectors) : undefined,
+        customSelectors: customSelectors
+          ? JSON.parse(customSelectors)
+          : undefined,
       });
 
       console.log('Test result:', result);
-      
+
       toast({
         title: 'Test Complete',
         description: `Found ${result.recordsFound} records`,
@@ -174,7 +200,6 @@ export default function Crawler() {
         npsData: result.transformedData,
         result: result.rawData,
       });
-
     } catch (error: any) {
       toast({
         title: 'Test Failed',
@@ -195,7 +220,7 @@ export default function Crawler() {
       <SideNav userRole={userRole} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <HeaderBar userRole={userRole} onLogout={handleLogout} />
-        
+
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Backend Status Alert */}
@@ -204,7 +229,8 @@ export default function Crawler() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Backend Offline</AlertTitle>
                 <AlertDescription>
-                  The crawler backend is not running. Please start it with: cd backend && npm run dev
+                  The crawler backend is not running. Please start it with: cd
+                  backend && npm run dev
                 </AlertDescription>
               </Alert>
             )}
@@ -265,7 +291,7 @@ export default function Crawler() {
                         type="url"
                         placeholder="https://example.com/reviews"
                         value={url}
-                        onChange={(e) => setUrl(e.target.value)}
+                        onChange={e => setUrl(e.target.value)}
                         disabled={backendStatus !== 'online'}
                       />
                     </div>
@@ -282,7 +308,7 @@ export default function Crawler() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="">No Template</SelectItem>
-                          {templates.map((template) => (
+                          {templates.map(template => (
                             <SelectItem key={template.id} value={template.id}>
                               {template.name}
                             </SelectItem>
@@ -293,12 +319,14 @@ export default function Crawler() {
 
                     {!selectedTemplate && (
                       <div className="space-y-2">
-                        <Label htmlFor="selectors">Custom Selectors (JSON)</Label>
+                        <Label htmlFor="selectors">
+                          Custom Selectors (JSON)
+                        </Label>
                         <Textarea
                           id="selectors"
                           placeholder='{"npsScore": ".rating", "reviews": ".review-text"}'
                           value={customSelectors}
-                          onChange={(e) => setCustomSelectors(e.target.value)}
+                          onChange={e => setCustomSelectors(e.target.value)}
                           className="font-mono text-sm"
                           rows={4}
                           disabled={backendStatus !== 'online'}
@@ -340,9 +368,15 @@ export default function Crawler() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        {jobStatus.status === 'processing' && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {jobStatus.status === 'completed' && <CheckCircle className="h-4 w-4 text-green-600" />}
-                        {jobStatus.status === 'failed' && <XCircle className="h-4 w-4 text-red-600" />}
+                        {jobStatus.status === 'processing' && (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        )}
+                        {jobStatus.status === 'completed' && (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        )}
+                        {jobStatus.status === 'failed' && (
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        )}
                         Job Status: {jobStatus.status}
                       </CardTitle>
                     </CardHeader>
@@ -357,7 +391,9 @@ export default function Crawler() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                crawlerApi.importToLocalStorage(jobStatus.npsData!);
+                                crawlerApi.importToLocalStorage(
+                                  jobStatus.npsData!
+                                );
                                 toast({
                                   title: 'Data Imported',
                                   description: `Successfully imported ${jobStatus.npsData!.length} records`,
@@ -395,7 +431,7 @@ export default function Crawler() {
                         id="batch-urls"
                         placeholder="https://example.com/page1&#10;https://example.com/page2&#10;https://example.com/page3"
                         value={batchUrls}
-                        onChange={(e) => setBatchUrls(e.target.value)}
+                        onChange={e => setBatchUrls(e.target.value)}
                         rows={8}
                         disabled={backendStatus !== 'online'}
                       />
@@ -437,7 +473,7 @@ export default function Crawler() {
                         id="csv-file"
                         type="file"
                         accept=".csv"
-                        onChange={async (e) => {
+                        onChange={async e => {
                           const file = e.target.files?.[0];
                           if (file) {
                             setIsLoading(true);
@@ -473,7 +509,7 @@ export default function Crawler() {
                           type="url"
                           placeholder="https://example.com/data.csv"
                           value={url}
-                          onChange={(e) => setUrl(e.target.value)}
+                          onChange={e => setUrl(e.target.value)}
                           disabled={backendStatus !== 'online'}
                         />
                         <Button
@@ -486,10 +522,11 @@ export default function Crawler() {
                               });
                               return;
                             }
-                            
+
                             setIsLoading(true);
                             try {
-                              const result = await crawlerApi.processCSVFromURL(url);
+                              const result =
+                                await crawlerApi.processCSVFromURL(url);
                               if (result.success && result.data) {
                                 crawlerApi.importToLocalStorage(result.data);
                                 toast({
@@ -528,9 +565,10 @@ export default function Crawler() {
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>CSV Format</AlertTitle>
                       <AlertDescription>
-                        The CSV processor automatically detects common column headers like:
-                        Store No, State, Region, City, NPS Score, Response Date, Comments, etc.
-                        Data is normalized and imported directly to your dashboard.
+                        The CSV processor automatically detects common column
+                        headers like: Store No, State, Region, City, NPS Score,
+                        Response Date, Comments, etc. Data is normalized and
+                        imported directly to your dashboard.
                       </AlertDescription>
                     </Alert>
                   </CardContent>
@@ -547,10 +585,12 @@ export default function Crawler() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid gap-4 md:grid-cols-2">
-                      {templates.map((template) => (
+                      {templates.map(template => (
                         <Card key={template.id}>
                           <CardHeader>
-                            <CardTitle className="text-base">{template.name}</CardTitle>
+                            <CardTitle className="text-base">
+                              {template.name}
+                            </CardTitle>
                             <Badge variant="outline">
                               {template.usePuppeteer ? 'Dynamic' : 'Static'}
                             </Badge>
@@ -572,4 +612,4 @@ export default function Crawler() {
       </div>
     </div>
   );
-} 
+}

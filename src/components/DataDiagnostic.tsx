@@ -10,34 +10,38 @@ export function DataDiagnostic() {
 
   const analyzeData = () => {
     const records = JSON.parse(localStorage.getItem('nps-records') || '[]');
-    
+
     if (records.length === 0) {
-      setDataInfo({ 
-        hasData: false, 
-        message: 'No data loaded. Please upload a CSV file.' 
+      setDataInfo({
+        hasData: false,
+        message: 'No data loaded. Please upload a CSV file.',
       });
       return;
     }
 
     // Get first record to analyze structure
     const firstRecord = records[0];
-    const columns = Object.keys(firstRecord).filter(key => key !== '_normalized');
-    const normalizedFields = firstRecord._normalized ? Object.keys(firstRecord._normalized) : [];
+    const columns = Object.keys(firstRecord).filter(
+      key => key !== '_normalized'
+    );
+    const normalizedFields = firstRecord._normalized
+      ? Object.keys(firstRecord._normalized)
+      : [];
 
-          // Extract unique values
-      const uniqueStores = new Set();
-      const uniqueStates = new Set();
-      const uniqueRegions = new Set();
-    
+    // Extract unique values
+    const uniqueStores = new Set();
+    const uniqueStates = new Set();
+    const uniqueRegions = new Set();
+
     records.slice(0, 10).forEach((r: any) => {
       // Try different ways to get store
       const store = r['Store No.'] || r['Store No'] || r._normalized?.storeCode;
       const state = r['State'] || r._normalized?.state;
       const region = r['Region'] || r._normalized?.region;
-      
-              if (store) uniqueStores.add(store);
-        if (state) uniqueStates.add(state);
-        if (region) uniqueRegions.add(region);
+
+      if (store) uniqueStores.add(store);
+      if (state) uniqueStates.add(state);
+      if (region) uniqueRegions.add(region);
     });
 
     setDataInfo({
@@ -46,29 +50,29 @@ export function DataDiagnostic() {
       columns: columns,
       columnCount: columns.length,
       normalizedFields: normalizedFields,
-              firstRecord: {
+      firstRecord: {
         'Store No.': firstRecord['Store No.'],
         'Store Franchise': firstRecord['Store Franchise'],
-        'State': firstRecord['State'],
-        'Region': firstRecord['Region'],
-        'NPS': firstRecord['NPS'],
-        '_normalized': firstRecord._normalized
+        State: firstRecord['State'],
+        Region: firstRecord['Region'],
+        NPS: firstRecord['NPS'],
+        _normalized: firstRecord._normalized,
       },
-              uniqueStores: Array.from(uniqueStores),
-        uniqueStates: Array.from(uniqueStates),
-        uniqueRegions: Array.from(uniqueRegions),
-      rawFirstRecord: firstRecord
+      uniqueStores: Array.from(uniqueStores),
+      uniqueStates: Array.from(uniqueStates),
+      uniqueRegions: Array.from(uniqueRegions),
+      rawFirstRecord: firstRecord,
     });
   };
 
   useEffect(() => {
     analyzeData();
-    
+
     // Listen for data updates
     const handleUpdate = () => analyzeData();
     window.addEventListener('nps-data-updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
-    
+
     return () => {
       window.removeEventListener('nps-data-updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
@@ -115,14 +119,18 @@ export function DataDiagnostic() {
                 <AlertCircle className="w-5 h-5 text-yellow-500" />
               )}
               <span className="font-medium">
-                {dataInfo.hasData ? `${dataInfo.totalRecords} records loaded` : dataInfo.message}
+                {dataInfo.hasData
+                  ? `${dataInfo.totalRecords} records loaded`
+                  : dataInfo.message}
               </span>
             </div>
 
             {dataInfo.hasData && (
               <>
                 <div>
-                  <h4 className="font-medium mb-2">Detected Columns ({dataInfo.columnCount}):</h4>
+                  <h4 className="font-medium mb-2">
+                    Detected Columns ({dataInfo.columnCount}):
+                  </h4>
                   <div className="flex flex-wrap gap-1">
                     {dataInfo.columns.map((col: string) => (
                       <Badge key={col} variant="outline" className="text-xs">
@@ -133,10 +141,14 @@ export function DataDiagnostic() {
                 </div>
 
                 <div>
-                              <h4 className="font-medium mb-2">Stores Found:</h4>
-            <div className="flex flex-wrap gap-1">
-              {dataInfo.uniqueStores.map((store: string) => (
-                      <Badge key={store} variant="secondary" className="text-xs">
+                  <h4 className="font-medium mb-2">Stores Found:</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {dataInfo.uniqueStores.map((store: string) => (
+                      <Badge
+                        key={store}
+                        variant="secondary"
+                        className="text-xs"
+                      >
                         {store}
                       </Badge>
                     ))}
@@ -144,10 +156,14 @@ export function DataDiagnostic() {
                 </div>
 
                 <div>
-                              <h4 className="font-medium mb-2">States Found:</h4>
-            <div className="flex flex-wrap gap-1">
-              {dataInfo.uniqueStates.map((state: string) => (
-                      <Badge key={state} variant="secondary" className="text-xs">
+                  <h4 className="font-medium mb-2">States Found:</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {dataInfo.uniqueStates.map((state: string) => (
+                      <Badge
+                        key={state}
+                        variant="secondary"
+                        className="text-xs"
+                      >
                         {state}
                       </Badge>
                     ))}
@@ -183,4 +199,4 @@ export function DataDiagnostic() {
       </CardContent>
     </Card>
   );
-} 
+}

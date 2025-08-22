@@ -35,7 +35,9 @@ export class AIService {
     }
   }
 
-  private async analyzeWithSupabase(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
+  private async analyzeWithSupabase(
+    request: AIAnalysisRequest
+  ): Promise<AIAnalysisResponse> {
     try {
       const response = await fetch('/functions/v1/ai-insights', {
         method: 'POST',
@@ -47,12 +49,14 @@ export class AIService {
           analysisType: request.analysisType,
           filters: {
             ...request.filters,
-            dateRange: request.filters?.dateRange ? {
-              from: request.filters.dateRange.from?.toISOString(),
-              to: request.filters.dateRange.to?.toISOString()
-            } : undefined
-          }
-        })
+            dateRange: request.filters?.dateRange
+              ? {
+                  from: request.filters.dateRange.from?.toISOString(),
+                  to: request.filters.dateRange.to?.toISOString(),
+                }
+              : undefined,
+          },
+        }),
       });
 
       if (!response.ok) {
@@ -64,12 +68,15 @@ export class AIService {
       console.error('Error calling Supabase AI function:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }
 
-  private async analyzeWithDirectAPI(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
+  private async analyzeWithDirectAPI(
+    request: AIAnalysisRequest
+  ): Promise<AIAnalysisResponse> {
     // Prefer key from ctor, else fallback to localStorage
     const key = this.apiKey || localStorage.getItem('openai_api_key');
     if (!key) {
@@ -83,32 +90,42 @@ export class AIService {
       // Get system prompts from configuration
       const config = localStorage.getItem('system_config');
       const systemPrompts = config ? JSON.parse(config).systemPrompts : {};
-      
+
       switch (request.analysisType) {
         case 'insights':
-          systemPrompt = systemPrompts.insights || 'You are an expert retail analyst specializing in NPS data. Provide actionable insights based on the provided data.';
+          systemPrompt =
+            systemPrompts.insights ||
+            'You are an expert retail analyst specializing in NPS data. Provide actionable insights based on the provided data.';
           userPrompt = `Analyze this NPS data and provide key insights:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters applied: ${JSON.stringify(request.filters)}\n\nProvide 3-5 bullet points with specific recommendations.`;
           break;
         case 'escalation':
-          systemPrompt = systemPrompts.escalation || 'You are a retail operations expert. Identify critical issues that require immediate escalation based on NPS data patterns.';
+          systemPrompt =
+            systemPrompts.escalation ||
+            'You are a retail operations expert. Identify critical issues that require immediate escalation based on NPS data patterns.';
           userPrompt = `Review this data for critical issues requiring escalation:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters: ${JSON.stringify(request.filters)}\n\nIdentify issues with severity levels and recommended actions.`;
           break;
         case 'trends':
-          systemPrompt = systemPrompts.trends || 'You are a data scientist specializing in trend analysis. Identify patterns and predict future trends in NPS data.';
+          systemPrompt =
+            systemPrompts.trends ||
+            'You are a data scientist specializing in trend analysis. Identify patterns and predict future trends in NPS data.';
           userPrompt = `Analyze trends in this data:\n${JSON.stringify(request.data).slice(0, 6000)}\n\nFilters: ${JSON.stringify(request.filters)}\n\nProvide trend analysis and forecasting insights.`;
           break;
       }
 
       // Get model configuration
       const systemConfig = localStorage.getItem('system_config');
-      const model = systemConfig ? JSON.parse(systemConfig).model : 'gpt-3.5-turbo';
-      const fallbackModel = systemConfig ? JSON.parse(systemConfig).fallbackModel : 'gpt-3.5-turbo';
-      
+      const model = systemConfig
+        ? JSON.parse(systemConfig).model
+        : 'gpt-3.5-turbo';
+      const fallbackModel = systemConfig
+        ? JSON.parse(systemConfig).fallbackModel
+        : 'gpt-3.5-turbo';
+
       let response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`,
+          Authorization: `Bearer ${key}`,
         },
         body: JSON.stringify({
           model: model, // Use configured model (GPT-4 Turbo)
@@ -120,7 +137,7 @@ export class AIService {
           ],
         }),
       });
-      
+
       // If GPT-4 fails, try fallback model
       if (!response.ok && response.status === 429) {
         console.log('GPT-4 rate limited, trying fallback model...');
@@ -128,7 +145,7 @@ export class AIService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${key}`,
+            Authorization: `Bearer ${key}`,
           },
           body: JSON.stringify({
             model: fallbackModel,
@@ -143,7 +160,9 @@ export class AIService {
       }
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `OpenAI API error: ${response.status} ${response.statusText}`
+        );
       }
 
       const aiResponse = await response.json();
@@ -157,7 +176,11 @@ export class AIService {
       };
     } catch (error) {
       console.error('Error calling OpenAI API directly:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error occurred' };
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
+      };
     }
   }
 
@@ -166,7 +189,7 @@ export class AIService {
     const result = await this.analyzeData({
       data,
       analysisType: 'escalation',
-      filters
+      filters,
     });
 
     if (!result.success || !result.analysis) {
@@ -186,14 +209,19 @@ export class AIService {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (line.includes('CRITICAL') || line.includes('HIGH') || line.includes('URGENT')) {
+      if (
+        line.includes('CRITICAL') ||
+        line.includes('HIGH') ||
+        line.includes('URGENT')
+      ) {
         escalations.push({
           id: `escalation-${i}`,
           title: line.substring(0, 50) + '...',
           severity: line.includes('CRITICAL') ? 'critical' : 'high',
           description: line,
-          aiRecommendation: lines[i + 1] || 'No specific recommendation provided',
-          timestamp: 'Generated from AI analysis'
+          aiRecommendation:
+            lines[i + 1] || 'No specific recommendation provided',
+          timestamp: 'Generated from AI analysis',
         });
       }
     }

@@ -21,7 +21,7 @@ interface AuthResponse {
 class AuthService {
   private readonly STORAGE_KEY = 'nps_auth_token';
   private readonly USER_KEY = 'nps_current_user';
-  
+
   // Demo users for testing
   private readonly demoUsers = [
     // Admin accounts
@@ -33,8 +33,9 @@ class AuthService {
         email: 'admin@trends.com',
         name: 'Admin User',
         role: 'admin' as const,
-        avatar: 'https://ui-avatars.com/api/?name=Admin+User&background=6366f1&color=fff'
-      }
+        avatar:
+          'https://ui-avatars.com/api/?name=Admin+User&background=6366f1&color=fff',
+      },
     },
     {
       email: 'admin@reliancetrends.com',
@@ -44,8 +45,9 @@ class AuthService {
         email: 'admin@reliancetrends.com',
         name: 'Admin User',
         role: 'admin' as const,
-        avatar: 'https://ui-avatars.com/api/?name=Admin+User&background=6366f1&color=fff'
-      }
+        avatar:
+          'https://ui-avatars.com/api/?name=Admin+User&background=6366f1&color=fff',
+      },
     },
     // Manager accounts
     {
@@ -56,8 +58,9 @@ class AuthService {
         email: 'manager@trends.com',
         name: 'Store Manager',
         role: 'store_manager' as const,
-        avatar: 'https://ui-avatars.com/api/?name=Store+Manager&background=10b981&color=fff'
-      }
+        avatar:
+          'https://ui-avatars.com/api/?name=Store+Manager&background=10b981&color=fff',
+      },
     },
     {
       email: 'manager@reliancetrends.com',
@@ -67,8 +70,9 @@ class AuthService {
         email: 'manager@reliancetrends.com',
         name: 'Store Manager',
         role: 'store_manager' as const,
-        avatar: 'https://ui-avatars.com/api/?name=Store+Manager&background=10b981&color=fff'
-      }
+        avatar:
+          'https://ui-avatars.com/api/?name=Store+Manager&background=10b981&color=fff',
+      },
     },
     // Viewer/User accounts
     {
@@ -79,8 +83,9 @@ class AuthService {
         email: 'viewer@trends.com',
         name: 'Viewer User',
         role: 'user' as const,
-        avatar: 'https://ui-avatars.com/api/?name=Viewer+User&background=f59e0b&color=fff'
-      }
+        avatar:
+          'https://ui-avatars.com/api/?name=Viewer+User&background=f59e0b&color=fff',
+      },
     },
     {
       email: 'user@trends.com',
@@ -90,8 +95,9 @@ class AuthService {
         email: 'user@trends.com',
         name: 'Regular User',
         role: 'user' as const,
-        avatar: 'https://ui-avatars.com/api/?name=Regular+User&background=f59e0b&color=fff'
-      }
+        avatar:
+          'https://ui-avatars.com/api/?name=Regular+User&background=f59e0b&color=fff',
+      },
     },
     {
       email: 'user@reliancetrends.com',
@@ -101,35 +107,36 @@ class AuthService {
         email: 'user@reliancetrends.com',
         name: 'Regular User',
         role: 'user' as const,
-        avatar: 'https://ui-avatars.com/api/?name=Regular+User&background=f59e0b&color=fff'
-      }
-    }
+        avatar:
+          'https://ui-avatars.com/api/?name=Regular+User&background=f59e0b&color=fff',
+      },
+    },
   ];
 
   // Login user
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // Find matching user
     const demoUser = this.demoUsers.find(
       u => u.email === credentials.email && u.password === credentials.password
     );
-    
+
     if (demoUser) {
       const token = this.generateToken(demoUser.user);
       this.saveAuth(token, demoUser.user);
-      
+
       return {
         success: true,
         user: demoUser.user,
-        token
+        token,
       };
     }
-    
+
     return {
       success: false,
-      message: 'Invalid email or password'
+      message: 'Invalid email or password',
     };
   }
 
@@ -138,10 +145,10 @@ class AuthService {
     // Clear all auth data
     localStorage.removeItem(this.STORAGE_KEY);
     localStorage.removeItem(this.USER_KEY);
-    
+
     // Clear session storage to force login on next visit
     sessionStorage.clear();
-    
+
     // Only redirect if not already on login page
     if (window.location.pathname !== '/login') {
       window.location.href = '/login';
@@ -152,7 +159,7 @@ class AuthService {
   isAuthenticated(): boolean {
     const token = this.getToken();
     const user = this.getCurrentUser();
-    
+
     // For demo, just check if token and user exist
     return !!(token && user);
   }
@@ -161,7 +168,7 @@ class AuthService {
   getCurrentUser(): User | null {
     const userStr = localStorage.getItem(this.USER_KEY);
     if (!userStr) return null;
-    
+
     try {
       return JSON.parse(userStr);
     } catch {
@@ -183,15 +190,17 @@ class AuthService {
   // Generate mock JWT token
   private generateToken(user: User): string {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-    const payload = btoa(JSON.stringify({
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
-      iat: Math.floor(Date.now() / 1000)
-    }));
+    const payload = btoa(
+      JSON.stringify({
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24 hours
+        iat: Math.floor(Date.now() / 1000),
+      })
+    );
     const signature = btoa('mock-signature-' + Date.now());
-    
+
     return `${header}.${payload}.${signature}`;
   }
 
@@ -210,28 +219,31 @@ class AuthService {
     if (!currentUser) {
       return {
         success: false,
-        message: 'User not authenticated'
+        message: 'User not authenticated',
       };
     }
-    
+
     const updatedUser = { ...currentUser, ...updates };
     localStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
-    
+
     return {
       success: true,
-      user: updatedUser
+      user: updatedUser,
     };
   }
 
   // Change password (mock)
-  async changePassword(currentPassword: string, newPassword: string): Promise<AuthResponse> {
+  async changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<AuthResponse> {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // In a real app, this would validate current password and update on server
     return {
       success: true,
-      message: 'Password changed successfully'
+      message: 'Password changed successfully',
     };
   }
 
@@ -239,22 +251,22 @@ class AuthService {
   async requestPasswordReset(email: string): Promise<AuthResponse> {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     const userExists = this.demoUsers.some(u => u.email === email);
-    
+
     if (userExists) {
       return {
         success: true,
-        message: 'Password reset link sent to your email'
+        message: 'Password reset link sent to your email',
       };
     }
-    
+
     return {
       success: false,
-      message: 'Email not found in our records'
+      message: 'Email not found in our records',
     };
   }
 }
 
 export default new AuthService();
-export type { User, LoginCredentials, AuthResponse }; 
+export type { User, LoginCredentials, AuthResponse };

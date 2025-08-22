@@ -1,34 +1,41 @@
-import { useState, useEffect } from "react";
-import { HeaderBar } from "@/components/layout/HeaderBar";
-import { SideNav } from "@/components/layout/SideNav";
-import { GlobalFilterBar } from "@/components/GlobalFilterBar";
-import CSVDataTable from "@/components/CSVDataTable";
-import DataExportButton from "@/components/DataExportButton";
-import { StoreDetailView } from "@/components/StoreDetailView";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Store, TrendingUp, Users, MapPin, Star, AlertCircle, Eye } from "lucide-react";
-import { toast } from "sonner";
-import authService from "@/services/authService";
-import { useData } from "@/contexts/DataContext";
+import { useState, useEffect } from 'react';
+import { HeaderBar } from '@/components/layout/HeaderBar';
+import { SideNav } from '@/components/layout/SideNav';
+import { GlobalFilterBar } from '@/components/GlobalFilterBar';
+import CSVDataTable from '@/components/CSVDataTable';
+import DataExportButton from '@/components/DataExportButton';
+import { StoreDetailView } from '@/components/StoreDetailView';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Store,
+  TrendingUp,
+  Users,
+  MapPin,
+  Star,
+  AlertCircle,
+  Eye,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import authService from '@/services/authService';
+import { useData } from '@/contexts/DataContext';
 
 export default function Stores() {
   const currentUser = authService.getCurrentUser();
-  const [userRole] = useState<"admin" | "user" | "store_manager">(currentUser?.role || "user");
+  const [userRole] = useState<'admin' | 'user' | 'store_manager'>(
+    currentUser?.role || 'user'
+  );
   const [storeStats, setStoreStats] = useState<any[]>([]);
-  const [selectedStoreCode, setSelectedStoreCode] = useState<string | null>(null);
-  
+  const [selectedStoreCode, setSelectedStoreCode] = useState<string | null>(
+    null
+  );
+
   // Use centralized data context
-  const { 
-    filteredData: data, 
-    aggregates, 
-    isLoading,
-    refreshData
-  } = useData();
+  const { filteredData: data, aggregates, isLoading, refreshData } = useData();
 
   const handleLogout = () => {
-    console.log("Logout clicked");
+    console.log('Logout clicked');
   };
 
   // Load initial data
@@ -49,22 +56,36 @@ export default function Stores() {
       setStoreStats([]);
       return;
     }
-    
+
     const statsMap = new Map();
-    
+
     records.forEach(record => {
       if (!record) return;
-      
-      const storeCode = record?.storeCode || record?.['Store Code'] || record?.['Store No'] || record?.['Store No.'] || 'Unknown';
-      const storeName = record?.storeName || record?.['Store Name'] || record?.Description || record?.['Place Of Business'] || 'Unknown Store';
-      
+
+      const storeCode =
+        record?.storeCode ||
+        record?.['Store Code'] ||
+        record?.['Store No'] ||
+        record?.['Store No.'] ||
+        'Unknown';
+      const storeName =
+        record?.storeName ||
+        record?.['Store Name'] ||
+        record?.Description ||
+        record?.['Place Of Business'] ||
+        'Unknown Store';
+
       if (!statsMap.has(storeCode)) {
         statsMap.set(storeCode, {
           storeCode,
           storeName,
           state: record?.state || record?.State || 'Unknown',
           city: record?.city || record?.City || 'Unknown',
-          region: record?.region || record?.Region || record?.['Region Code'] || 'Unknown',
+          region:
+            record?.region ||
+            record?.Region ||
+            record?.['Region Code'] ||
+            'Unknown',
           format: record?.['Format'] || 'Standard',
           subFormat: record?.['Sub Format'] || '-',
           totalResponses: 0,
@@ -78,7 +99,7 @@ export default function Stores() {
             productAvailability: 0,
             storeAmbience: 0,
             trialRoom: 0,
-            productVariety: 0
+            productVariety: 0,
           },
           ratingCounts: {
             staffFriendliness: 0,
@@ -86,16 +107,16 @@ export default function Stores() {
             productAvailability: 0,
             storeAmbience: 0,
             trialRoom: 0,
-            productVariety: 0
-          }
+            productVariety: 0,
+          },
         });
       }
-      
+
       const stats = statsMap.get(storeCode);
       if (!stats) return;
-      
+
       stats.totalResponses++;
-      
+
       // NPS Score calculation - handle multiple field names
       let npsScore = 0;
       if (record?.npsScore !== undefined) {
@@ -104,18 +125,26 @@ export default function Stores() {
         npsScore = parseFloat(record['NPS Score']);
       } else if (record?.nps !== undefined) {
         npsScore = parseFloat(record.nps);
-      } else if (record?.['On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'] !== undefined) {
-        npsScore = parseFloat(record['On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family']);
+      } else if (
+        record?.[
+          'On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'
+        ] !== undefined
+      ) {
+        npsScore = parseFloat(
+          record[
+            'On a scale of 0 to 10, with 0 being the lowest and 10 being the highest rating - how likely are you to recommend Trends to friends and family'
+          ]
+        );
       }
-      
+
       if (!isNaN(npsScore)) {
         stats.totalScore += npsScore;
-        
+
         if (npsScore >= 9) stats.promoters++;
         else if (npsScore >= 7) stats.passives++;
         else if (npsScore <= 6) stats.detractors++;
       }
-      
+
       // Aggregate ratings
       const addRating = (key: string, value: any) => {
         if (value !== undefined && value !== null && value !== '') {
@@ -126,73 +155,100 @@ export default function Stores() {
           }
         }
       };
-      
-      addRating('staffFriendliness', record['Please rate us on the following - Staff Friendliness & Service']);
-      addRating('billingExperience', record['Please rate us on the following - Billing Experience']);
-      addRating('productAvailability', record['Please rate us on the following - Product Size availability']);
-      addRating('storeAmbience', record['Please rate us on the following - Store Ambience']);
-      addRating('trialRoom', record['Please rate us on the following - Trial Room Experience']);
-      addRating('productVariety', record['Please rate us on the following - Product Options/ Variety']);
+
+      addRating(
+        'staffFriendliness',
+        record['Please rate us on the following - Staff Friendliness & Service']
+      );
+      addRating(
+        'billingExperience',
+        record['Please rate us on the following - Billing Experience']
+      );
+      addRating(
+        'productAvailability',
+        record['Please rate us on the following - Product Size availability']
+      );
+      addRating(
+        'storeAmbience',
+        record['Please rate us on the following - Store Ambience']
+      );
+      addRating(
+        'trialRoom',
+        record['Please rate us on the following - Trial Room Experience']
+      );
+      addRating(
+        'productVariety',
+        record['Please rate us on the following - Product Options/ Variety']
+      );
     });
-    
+
     const storeStatsArray = Array.from(statsMap.values()).map(stats => {
       // Calculate averages
       const avgRatings: any = {};
       Object.keys(stats.ratings).forEach(key => {
-        avgRatings[key] = stats.ratingCounts[key] > 0 
-          ? (stats.ratings[key] / stats.ratingCounts[key]).toFixed(1)
-          : '0';
+        avgRatings[key] =
+          stats.ratingCounts[key] > 0
+            ? (stats.ratings[key] / stats.ratingCounts[key]).toFixed(1)
+            : '0';
       });
-      
+
       // Calculate key KPIs used by the UI
-      const avgScore = stats.totalResponses > 0 
-        ? (stats.totalScore / stats.totalResponses)
-        : 0;
-      const detractorRate = stats.totalResponses > 0
-        ? (stats.detractors / stats.totalResponses) * 100
-        : 0;
-      const nps = stats.totalResponses > 0
-        ? Math.round(((stats.promoters - stats.detractors) / stats.totalResponses) * 100)
-        : 0;
+      const avgScore =
+        stats.totalResponses > 0 ? stats.totalScore / stats.totalResponses : 0;
+      const detractorRate =
+        stats.totalResponses > 0
+          ? (stats.detractors / stats.totalResponses) * 100
+          : 0;
+      const nps =
+        stats.totalResponses > 0
+          ? Math.round(
+              ((stats.promoters - stats.detractors) / stats.totalResponses) *
+                100
+            )
+          : 0;
 
       return {
         ...stats,
         // Keep string fields for places where strings are displayed
         averageNPS: avgScore.toFixed(1),
-        npsScore: stats.totalResponses > 0 
-          ? (((stats.promoters - stats.detractors) / stats.totalResponses) * 100).toFixed(1)
-          : '0',
+        npsScore:
+          stats.totalResponses > 0
+            ? (
+                ((stats.promoters - stats.detractors) / stats.totalResponses) *
+                100
+              ).toFixed(1)
+            : '0',
         // Add numeric fields used by table rendering
         avgScore,
         detractorRate,
         nps,
-        avgRatings
+        avgRatings,
       };
     });
-    
+
     // Sort by total responses
     storeStatsArray.sort((a, b) => b.totalResponses - a.totalResponses);
-    
+
     setStoreStats(storeStatsArray);
   };
 
-
-
   const getNPSBadge = (score: number) => {
-    if (score > 0) return <Badge className="bg-green-100 text-green-800">Positive</Badge>;
-    if (score < 0) return <Badge className="bg-red-100 text-red-800">Negative</Badge>;
+    if (score > 0)
+      return <Badge className="bg-green-100 text-green-800">Positive</Badge>;
+    if (score < 0)
+      return <Badge className="bg-red-100 text-red-800">Negative</Badge>;
     return <Badge className="bg-gray-100 text-gray-800">Neutral</Badge>;
   };
 
   return (
     <div className="min-h-screen bg-background">
       <HeaderBar userRole={userRole} onLogout={handleLogout} />
-      
+
       <div className="flex">
         <SideNav userRole={userRole} />
-        
-        <main className="flex-1 p-6 overflow-y-auto">
-          <div className="mb-6">
+
+        <main className="flex-1 p-6 overflow-y-auto pr-0">
+          <div className="mb-6 text-left">
             <h1 className="text-3xl font-bold">Store Performance</h1>
             <p className="text-muted-foreground">
               Detailed NPS analysis by store location
@@ -203,10 +259,12 @@ export default function Stores() {
           <GlobalFilterBar />
 
           {/* Store Statistics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Stores</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Stores
+                </CardTitle>
                 <Store className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -219,7 +277,9 @@ export default function Stores() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Responses</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Responses
+                </CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -232,16 +292,16 @@ export default function Stores() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Average NPS</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Average NPS
+                </CardTitle>
                 <Star className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
                   {aggregates?.npsScore?.toFixed(1) || '0'}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Overall score
-                </p>
+                <p className="text-xs text-muted-foreground">Overall score</p>
               </CardContent>
             </Card>
 
@@ -262,7 +322,7 @@ export default function Stores() {
           </div>
 
           {/* Top Performing Stores */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -276,7 +336,10 @@ export default function Stores() {
                     .filter(store => parseFloat(store.npsScore) > 0)
                     .slice(0, 5)
                     .map((store, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      >
                         <div>
                           <p className="font-medium">{store.storeCode}</p>
                           <p className="text-sm text-muted-foreground">
@@ -310,7 +373,10 @@ export default function Stores() {
                     .filter(store => parseFloat(store.npsScore) < 0)
                     .slice(0, 5)
                     .map((store, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      >
                         <div>
                           <p className="font-medium">{store.storeCode}</p>
                           <p className="text-sm text-muted-foreground">
@@ -333,7 +399,7 @@ export default function Stores() {
           </div>
 
           {/* Store Statistics Table */}
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden mt-6 mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Store className="h-5 w-5" />
@@ -346,49 +412,89 @@ export default function Stores() {
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium">Store</th>
-                      <th className="px-4 py-3 text-left font-medium">Location</th>
-                      <th className="px-4 py-3 text-center font-medium">NPS Score</th>
-                      <th className="px-4 py-3 text-center font-medium">Responses</th>
-                      <th className="px-4 py-3 text-center font-medium">Avg Score</th>
-                      <th className="px-4 py-3 text-center font-medium">Detractor Rate</th>
-                      <th className="px-4 py-3 text-center font-medium">Status</th>
-                      <th className="px-4 py-3 text-center font-medium">Actions</th>
+                      <th className="px-4 py-3 text-left font-medium">
+                        Location
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        NPS Score
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Responses
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Avg Score
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Detractor Rate
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-center font-medium">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {storeStats.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
-                          No store data available. Please upload CSV data to see store performance.
+                        <td
+                          colSpan={8}
+                          className="px-4 py-8 text-center text-muted-foreground"
+                        >
+                          No store data available. Please upload CSV data to see
+                          store performance.
                         </td>
                       </tr>
                     ) : (
                       storeStats.slice(0, 10).map((stat, index) => (
-                        <tr key={stat.storeCode} className="border-t hover:bg-muted/50">
+                        <tr
+                          key={stat.storeCode}
+                          className="border-t hover:bg-muted/50"
+                        >
                           <td className="px-4 py-3">
                             <div>
                               <p className="font-medium">{stat.storeName}</p>
-                              <p className="text-sm text-muted-foreground">{stat.storeCode}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {stat.storeCode}
+                              </p>
                             </div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
                               <MapPin className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-sm">{stat.city}, {stat.state}</span>
+                              <span className="text-sm">
+                                {stat.city}, {stat.state}
+                              </span>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`text-lg font-bold ${
-                              stat.nps >= 50 ? 'text-green-600' : 
-                              stat.nps >= 0 ? 'text-yellow-600' : 'text-red-600'
-                            }`}>
+                            <span
+                              className={`text-lg font-bold ${
+                                stat.nps >= 50
+                                  ? 'text-green-600'
+                                  : stat.nps >= 0
+                                    ? 'text-yellow-600'
+                                    : 'text-red-600'
+                              }`}
+                            >
                               {stat.nps}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">{stat.totalResponses}</td>
-                          <td className="px-4 py-3 text-center">{stat.avgScore.toFixed(1)}</td>
                           <td className="px-4 py-3 text-center">
-                            <Badge variant={stat.detractorRate > 30 ? "destructive" : "secondary"}>
+                            {stat.totalResponses}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {stat.avgScore.toFixed(1)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <Badge
+                              variant={
+                                stat.detractorRate > 30
+                                  ? 'destructive'
+                                  : 'secondary'
+                              }
+                            >
                               {stat.detractorRate.toFixed(1)}%
                             </Badge>
                           </td>
@@ -399,7 +505,9 @@ export default function Stores() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => setSelectedStoreCode(stat.storeCode)}
+                              onClick={() =>
+                                setSelectedStoreCode(stat.storeCode)
+                              }
                             >
                               <Eye className="h-4 w-4 mr-1" />
                               View Details
@@ -415,7 +523,7 @@ export default function Stores() {
           </Card>
 
           {/* Detailed Data Table */}
-          <CSVDataTable 
+          <CSVDataTable
             data={data}
             title="Store-wise NPS Records"
             columns={[
@@ -426,13 +534,13 @@ export default function Stores() {
               'responseDate',
               'npsScore',
               'npsCategory',
-              'comments'
+              'comments',
             ]}
             pageSize={50}
           />
         </main>
       </div>
-      
+
       {/* Store Detail View Dialog */}
       {selectedStoreCode && (
         <StoreDetailView

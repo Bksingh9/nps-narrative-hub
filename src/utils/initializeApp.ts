@@ -8,7 +8,9 @@ export function initializeApp() {
   const savedApiKey = localStorage.getItem('openai_api_key');
   if (!savedApiKey) {
     // Do not seed a demo API key. Prompt user to configure one in Settings instead.
-    console.warn('No OpenAI API key found. Set it in Settings to enable AI features.');
+    console.warn(
+      'No OpenAI API key found. Set it in Settings to enable AI features.'
+    );
   }
 
   // Initialize system configuration
@@ -16,25 +18,29 @@ export function initializeApp() {
   if (!savedConfig) {
     const defaultConfig = {
       systemPrompts: {
-        insights: 'You are an expert retail analyst specializing in NPS data. Provide actionable insights based on the provided data. Focus on: 1) Key trends and patterns, 2) Areas of concern, 3) Opportunities for improvement, 4) Specific recommendations. Format your response as clear bullet points.',
-        escalation: 'You are a retail operations expert. Identify critical issues that require immediate escalation based on NPS data patterns. Focus on: 1) Stores or regions with declining NPS, 2) High volume of detractors, 3) Recurring complaints, 4) Urgent issues requiring management attention.',
-        trends: 'You are a data scientist specializing in trend analysis. Identify patterns and predict future trends in NPS data. Focus on: 1) Temporal patterns, 2) Seasonal variations, 3) Regional differences, 4) Predictive insights for the next period.',
-        anomalies: 'You are an anomaly detection specialist. Identify unusual patterns or outliers in the NPS data that require investigation. Focus on: 1) Statistical outliers, 2) Sudden changes in patterns, 3) Unusual store performance, 4) Data quality issues.'
+        insights:
+          'You are an expert retail analyst specializing in NPS data. Provide actionable insights based on the provided data. Focus on: 1) Key trends and patterns, 2) Areas of concern, 3) Opportunities for improvement, 4) Specific recommendations. Format your response as clear bullet points.',
+        escalation:
+          'You are a retail operations expert. Identify critical issues that require immediate escalation based on NPS data patterns. Focus on: 1) Stores or regions with declining NPS, 2) High volume of detractors, 3) Recurring complaints, 4) Urgent issues requiring management attention.',
+        trends:
+          'You are a data scientist specializing in trend analysis. Identify patterns and predict future trends in NPS data. Focus on: 1) Temporal patterns, 2) Seasonal variations, 3) Regional differences, 4) Predictive insights for the next period.',
+        anomalies:
+          'You are an anomaly detection specialist. Identify unusual patterns or outliers in the NPS data that require investigation. Focus on: 1) Statistical outliers, 2) Sudden changes in patterns, 3) Unusual store performance, 4) Data quality issues.',
       },
       aiSettings: {
         autoGenerateInsights: false,
         insightsRefreshInterval: 3600000, // 1 hour in milliseconds
         maxRecordsForAnalysis: 100,
         temperature: 0.7,
-        maxTokens: 500
+        maxTokens: 500,
       },
       dataSettings: {
         defaultDateRange: 30, // days
         minNpsScore: 0,
         maxNpsScore: 10,
         promoterThreshold: 9,
-        detractorThreshold: 6
-      }
+        detractorThreshold: 6,
+      },
     };
     localStorage.setItem('system_config', JSON.stringify(defaultConfig));
     console.log('Initialized system configuration');
@@ -59,7 +65,9 @@ if (typeof window !== 'undefined') {
 }
 
 // Export helper to get system prompts
-export function getSystemPrompt(type: 'insights' | 'escalation' | 'trends' | 'chatbot'): string {
+export function getSystemPrompt(
+  type: 'insights' | 'escalation' | 'trends' | 'chatbot'
+): string {
   const config = localStorage.getItem('system_config');
   if (config) {
     const parsed = JSON.parse(config);
@@ -81,4 +89,4 @@ export function getCurrentModel(): string {
     return parsed.model || 'gpt-3.5-turbo';
   }
   return 'gpt-3.5-turbo';
-} 
+}

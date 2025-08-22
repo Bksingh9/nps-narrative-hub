@@ -1,37 +1,54 @@
 import { useState, useEffect } from 'react';
 import { HeaderBar } from '@/components/layout/HeaderBar';
 import { SideNav } from '@/components/layout/SideNav';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Upload as UploadIcon, 
-  FileText, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  Upload as UploadIcon,
+  FileText,
+  AlertCircle,
+  CheckCircle,
   Download,
   Loader2,
   Save,
   Trash2,
   TrendingUp,
-  Users
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import authService from '@/services/authService';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
-import { safeGetRecords, setRecords, computeNps, extractDate, extractScore, extractStore, extractState, extractRegion } from '@/lib/data';
+import {
+  safeGetRecords,
+  setRecords,
+  computeNps,
+  extractDate,
+  extractScore,
+  extractStore,
+  extractState,
+  extractRegion,
+} from '@/lib/data';
 
 export default function Upload() {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
-  const [userRole] = useState<'admin' | 'user' | 'store_manager'>(currentUser?.role || 'user');
-  
+  const [userRole] = useState<'admin' | 'user' | 'store_manager'>(
+    currentUser?.role || 'user'
+  );
+
   // Redirect non-admin users
   useEffect(() => {
     if (currentUser?.role !== 'admin') {
@@ -39,13 +56,15 @@ export default function Upload() {
       navigate('/');
     }
   }, [currentUser, navigate]);
-  
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadStatus, setUploadStatus] = useState<
+    'idle' | 'uploading' | 'success' | 'error'
+  >('idle');
   const [uploadMessage, setUploadMessage] = useState('');
-  
-  // Data state  
+
+  // Data state
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [savedRecords, setSavedRecords] = useState<any[]>([]);
   const [aggregates, setAggregates] = useState<any>(null);
@@ -60,7 +79,7 @@ export default function Upload() {
         npsScore: agg.nps,
         totalResponses: agg.total,
         promoters: saved.filter(r => extractScore(r) >= 9).length,
-        detractors: saved.filter(r => extractScore(r) <= 6).length
+        detractors: saved.filter(r => extractScore(r) <= 6).length,
       });
     }
   }, []);
@@ -73,7 +92,12 @@ export default function Upload() {
       storeCode: extractStore(row),
       state: extractState(row),
       region: extractRegion(row),
-      comments: row["Comments"] || row["Feedback"] || row["Remark"] || row["Observation"] || ""
+      comments:
+        row['Comments'] ||
+        row['Feedback'] ||
+        row['Remark'] ||
+        row['Observation'] ||
+        '',
     };
   };
 
@@ -101,6 +125,37 @@ export default function Upload() {
     setUploadMessage('Processing CSV file...');
 
     try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch(
+        'http://localhost:3001/api/crawler/csv/upload-realtime',
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        setUploadStatus('success');
+
+        toast.success(`Successfully loaded ${result.totalRecords} records!`);
+
+        // Dispatch event to update dashboard
+        window.dispatchEvent(
+          new CustomEvent('nps-data-updated', {
+            detail: {
+              records: result.totalRecords,
+              aggregates: result.aggregates,
+            },
+          })
+        );
+      } else {
+        setUploadStatus('error');
+        toast.error(result.error || 'Failed to upload CSV');
+      }
       Papa.parse(selectedFile, {
         header: true,
         skipEmptyLines: true,
@@ -117,21 +172,31 @@ export default function Upload() {
             // Deduplicate by JSON.stringify
             const existing = safeGetRecords();
             const existingSet = new Set(existing.map(r => JSON.stringify(r)));
-            const newRows = processed.filter(r => !existingSet.has(JSON.stringify(r)));
+            const newRows = processed.filter(
+              r => !existingSet.has(JSON.stringify(r))
+            );
 
             setParsedData(processed);
             setUploadStatus('success');
-            setUploadMessage(`Successfully parsed ${processed.length} records (${newRows.length} new)`);
-            
+            setUploadMessage(
+              `Successfully parsed ${processed.length} records (${newRows.length} new)`
+            );
+
             const agg = computeNps(processed);
             setAggregates({
               npsScore: agg.nps,
               totalResponses: agg.total,
               promoters: processed.filter(r => extractScore(r) >= 9).length,
-              detractors: processed.filter(r => extractScore(r) <= 6).length
+              detractors: processed.filter(r => extractScore(r) <= 6).length,
             });
 
-            toast.success('CSV processed successfully');
+            toast.success(
+              'CSV processed successfully. Redirecting to dashboard...'
+            );
+            // Navigate to dashboard after 1 seconds
+            setTimeout(() => {
+              navigate('/');
+            }, 1000);
           } catch (error: any) {
             setUploadStatus('error');
             setUploadMessage('Failed to process CSV data');
@@ -145,7 +210,7 @@ export default function Upload() {
           setUploadMessage(error.message || 'Failed to parse CSV');
           toast.error('Failed to parse CSV file');
           setIsUploading(false);
-        }
+        },
       });
     } catch (error: any) {
       setUploadStatus('error');
@@ -160,16 +225,20 @@ export default function Upload() {
       toast.error('No data to save');
       return;
     }
-    
+
     try {
       const existing = safeGetRecords();
       const existingSet = new Set(existing.map(r => JSON.stringify(r)));
-      const newRows = parsedData.filter(r => !existingSet.has(JSON.stringify(r)));
+      const newRows = parsedData.filter(
+        r => !existingSet.has(JSON.stringify(r))
+      );
       const merged = [...existing, ...newRows];
-      
+
       setRecords(merged);
       setSavedRecords(merged);
-      toast.success(`Saved dataset: ${merged.length} records (${newRows.length} new)`);
+      toast.success(
+        `Saved dataset: ${merged.length} records (${newRows.length} new)`
+      );
     } catch (error: any) {
       toast.error('Failed to save data');
     }
@@ -195,7 +264,7 @@ export default function Upload() {
       toast.error('No data to export');
       return;
     }
-    
+
     const csvContent = Papa.unparse(dataToExport);
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -212,22 +281,22 @@ export default function Upload() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      <SideNav userRole={userRole} />
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <HeaderBar 
-          userRole={userRole}
-          onLogout={handleLogout}
-        />
-        
-        <main className="flex-1 overflow-y-auto p-6">
+    <div className="min-h-screen bg-background">
+      <HeaderBar userRole={userRole} onLogout={handleLogout} />
+      <div className="flex">
+        <SideNav userRole={userRole} />
+
+        <main className="flex-1 p-6 overflow-y-auto pr-0">
           <div className="max-w-7xl mx-auto space-y-6">
             {/* Header */}
             <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Real-Time CSV Data Processing</h1>
-                <p className="text-gray-600 mt-1">Upload and analyze NPS data with dynamic filtering</p>
+              <div className="text-left">
+                <h1 className="text-3xl font-bold">
+                  Real-Time CSV Data Processing
+                </h1>
+                <p className="text-muted-foreground">
+                  Upload and analyze NPS data with dynamic filtering
+                </p>
               </div>
               {(savedRecords.length > 0 || parsedData.length > 0) && (
                 <div className="flex gap-2">
@@ -248,54 +317,78 @@ export default function Upload() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">NPS Score</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground text-left">
+                      NPS Score
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold">{Math.round(aggregates.npsScore || 0)}</span>
+                      <span className="text-2xl font-bold">
+                        {Math.round(aggregates.npsScore || 0)}
+                      </span>
                       <TrendingUp className="w-4 h-4 text-green-500" />
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Total Responses</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground text-left">
+                      Total Responses
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold">{aggregates.totalResponses || 0}</span>
+                      <span className="text-2xl font-bold">
+                        {aggregates.totalResponses || 0}
+                      </span>
                       <Users className="w-4 h-4 text-blue-500" />
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Promoters</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground text-left">
+                      Promoters
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-green-600">{aggregates.promoters || 0}</span>
+                      <span className="text-2xl font-bold text-green-600">
+                        {aggregates.promoters || 0}
+                      </span>
                       <Badge variant="outline" className="text-xs">
-                        {aggregates.totalResponses > 0 
-                          ? `${Math.round((aggregates.promoters / aggregates.totalResponses) * 100)}%`
+                        {aggregates.totalResponses > 0
+                          ? `${Math.round(
+                              (aggregates.promoters /
+                                aggregates.totalResponses) *
+                                100
+                            )}%`
                           : '0%'}
                       </Badge>
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-gray-600">Detractors</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground text-left">
+                      Detractors
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-bold text-red-600">{aggregates.detractors || 0}</span>
+                      <span className="text-2xl font-bold text-red-600">
+                        {aggregates.detractors || 0}
+                      </span>
                       <Badge variant="outline" className="text-xs">
-                        {aggregates.totalResponses > 0 
-                          ? `${Math.round((aggregates.detractors / aggregates.totalResponses) * 100)}%`
+                        {aggregates.totalResponses > 0
+                          ? `${Math.round(
+                              (aggregates.detractors /
+                                aggregates.totalResponses) *
+                                100
+                            )}%`
                           : '0%'}
                       </Badge>
                     </div>
@@ -307,7 +400,9 @@ export default function Upload() {
             <Tabs defaultValue="upload" className="space-y-4">
               <TabsList>
                 <TabsTrigger value="upload">Upload CSV</TabsTrigger>
-                <TabsTrigger value="data" disabled={parsedData.length === 0}>Data Preview</TabsTrigger>
+                <TabsTrigger value="data" disabled={parsedData.length === 0}>
+                  Data Preview
+                </TabsTrigger>
               </TabsList>
 
               {/* Upload Tab */}
@@ -316,16 +411,18 @@ export default function Upload() {
                   <CardHeader>
                     <CardTitle>Upload CSV File</CardTitle>
                     <CardDescription>
-                      Upload your NPS data CSV file. The system will automatically detect columns for Response Date, State, Store Code, and NPS scores.
+                      Upload your NPS data CSV file. The system will
+                      automatically detect columns for Response Date, State,
+                      Store Code, and NPS scores.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                      <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
-                      
+                      <UploadIcon className="mx-auto h-12 w-12 text-muted-foreground" />
+
                       <div className="mt-4">
                         <Label htmlFor="file-upload" className="cursor-pointer">
-                          <span className="mt-2 block text-sm font-medium text-gray-900">
+                          <span className="mt-2 block text-sm font-semibold text-muted-foreground">
                             Click to upload or drag and drop
                           </span>
                           <Input
@@ -336,33 +433,47 @@ export default function Upload() {
                             className="sr-only"
                           />
                         </Label>
-                        <p className="mt-1 text-xs text-gray-500">CSV files up to 10MB</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          CSV files up to 10MB
+                        </p>
                       </div>
-                      
+
                       {selectedFile && (
                         <div className="mt-4 flex items-center justify-center gap-2">
                           <FileText className="h-4 w-4" />
-                          <span className="text-sm font-medium">{selectedFile.name}</span>
-                          <Badge variant="outline">{(selectedFile.size / 1024).toFixed(2)} KB</Badge>
+                          <span className="text-sm font-medium">
+                            {selectedFile.name}
+                          </span>
+                          <Badge variant="outline">
+                            {(selectedFile.size / 1024).toFixed(2)} KB
+                          </Badge>
                         </div>
                       )}
                     </div>
 
                     {uploadStatus !== 'idle' && (
-                      <Alert className={cn(
-                        uploadStatus === 'success' && 'border-green-500',
-                        uploadStatus === 'error' && 'border-red-500'
-                      )}>
-                        {uploadStatus === 'uploading' && <Loader2 className="h-4 w-4 animate-spin" />}
-                        {uploadStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
-                        {uploadStatus === 'error' && <AlertCircle className="h-4 w-4 text-red-500" />}
+                      <Alert
+                        className={cn(
+                          uploadStatus === 'success' && 'border-green-500',
+                          uploadStatus === 'error' && 'border-red-500'
+                        )}
+                      >
+                        {uploadStatus === 'uploading' && (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        )}
+                        {uploadStatus === 'success' && (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        )}
+                        {uploadStatus === 'error' && (
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                        )}
                         <AlertDescription>{uploadMessage}</AlertDescription>
                       </Alert>
                     )}
 
                     <div className="space-y-2">
-                      <Button 
-                        onClick={handleUpload} 
+                      <Button
+                        onClick={handleUpload}
                         disabled={!selectedFile || isUploading}
                         className="w-full"
                       >
@@ -378,9 +489,9 @@ export default function Upload() {
                           </>
                         )}
                       </Button>
-                      
+
                       {parsedData.length > 0 && (
-                        <Button 
+                        <Button
                           onClick={handleSaveData}
                           variant="outline"
                           className="w-full"
@@ -392,20 +503,32 @@ export default function Upload() {
                     </div>
 
                     {parsedData.length > 0 && (
-                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="mt-4 p-4 bg-background rounded-lg border-muted">
                         <h4 className="font-medium mb-2">Upload Summary</h4>
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Parsed Records:</span>
-                            <span className="font-medium">{parsedData.length}</span>
+                            <span className="text-muted-foreground">
+                              Parsed Records:
+                            </span>
+                            <span className="font-medium">
+                              {parsedData.length}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Saved Records:</span>
-                            <span className="font-medium">{savedRecords.length}</span>
+                            <span className="text-muted-foreground">
+                              Saved Records:
+                            </span>
+                            <span className="font-medium">
+                              {savedRecords.length}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">NPS Score:</span>
-                            <span className="font-medium">{aggregates?.npsScore || 'N/A'}</span>
+                            <span className="text-muted-foreground">
+                              NPS Score:
+                            </span>
+                            <span className="font-medium">
+                              {aggregates?.npsScore || 'N/A'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -426,18 +549,28 @@ export default function Upload() {
                   <CardContent>
                     {parsedData.length > 0 ? (
                       <div className="space-y-4">
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-muted-foreground">
                           Showing first 10 records of {parsedData.length} total
                         </div>
                         <div className="overflow-x-auto">
-                          <table className="w-full border-collapse border border-gray-200">
+                          <table className="w-full border-collapse border border-muted bg-background rounded-sm">
                             <thead>
-                              <tr className="bg-gray-50">
-                                <th className="border border-gray-200 p-2 text-left">Date</th>
-                                <th className="border border-gray-200 p-2 text-left">Store</th>
-                                <th className="border border-gray-200 p-2 text-left">State</th>
-                                <th className="border border-gray-200 p-2 text-left">NPS</th>
-                                <th className="border border-gray-200 p-2 text-left">Comments</th>
+                              <tr>
+                                <th className="border border-gray-200 p-2">
+                                  Date
+                                </th>
+                                <th className="border border-gray-200 p-2">
+                                  Store
+                                </th>
+                                <th className="border border-gray-200 p-2">
+                                  State
+                                </th>
+                                <th className="border border-gray-200 p-2">
+                                  NPS
+                                </th>
+                                <th className="border border-gray-200 p-2">
+                                  Comments
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
@@ -456,7 +589,9 @@ export default function Upload() {
                                     {extractScore(row) ?? 'N/A'}
                                   </td>
                                   <td className="border border-gray-200 p-2 max-w-xs truncate">
-                                    {row["Comments"] || row["Feedback"] || 'N/A'}
+                                    {row['Comments'] ||
+                                      row['Feedback'] ||
+                                      'N/A'}
                                   </td>
                                 </tr>
                               ))}
@@ -465,7 +600,7 @@ export default function Upload() {
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center text-gray-500 py-8">
+                      <div className="text-center text-muted-foreground py-8">
                         No data to preview. Upload a CSV file first.
                       </div>
                     )}
