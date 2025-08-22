@@ -460,9 +460,9 @@ class CSVProcessor {
     // Calculate average NPS for each state
     Object.keys(stateBreakdown).forEach(state => {
       const stateData = stateBreakdown[state];
-      stateData.averageNPS = stateData.totalNPS / stateData.count;
+      stateData.averageNPS = +(stateData.totalNPS / stateData.count).toFixed(1);
       stateData.npsScore =
-        ((stateData.promoters - stateData.detractors) / stateData.count) * 100;
+        Math.round(((stateData.promoters - stateData.detractors) / stateData.count) * 100);
     });
 
     // Store breakdown
@@ -485,12 +485,12 @@ class CSVProcessor {
     // Calculate average NPS for each store
     Object.keys(storeBreakdown).forEach(store => {
       storeBreakdown[store].averageNPS =
-        storeBreakdown[store].totalNPS / storeBreakdown[store].count;
+        +(storeBreakdown[store].totalNPS / storeBreakdown[store].count).toFixed(1);
     });
 
     return {
-      averageNPS: data.reduce((sum, d) => sum + d.npsScore, 0) / data.length,
-      npsScore: ((promoters - detractors) / data.length) * 100,
+      averageNPS: +(data.reduce((sum, d) => sum + d.npsScore, 0) / data.length).toFixed(1),
+      npsScore: Math.round(((promoters - detractors) / data.length) * 100),
       promoters,
       passives,
       detractors,

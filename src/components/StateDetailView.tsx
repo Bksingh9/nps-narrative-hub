@@ -106,6 +106,29 @@ export function StateDetailView({
     }>
   >([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [stateDriverAverages, setStateDriverAverages] = useState<
+    Array<{ label: string; avg: number | null; count: number }>
+  >([]);
+
+  const DRIVER_FIELDS: Array<{ label: string; keys: string[] }> = [
+    { label: 'Staff Friendliness', keys: ['Please rate us on the following - Staff Friendliness & Service'] },
+    { label: 'Billing Experience', keys: ['Please rate us on the following - Billing Experience'] },
+    { label: 'Product Availability', keys: ['Please rate us on the following - Product Size availability'] },
+    { label: 'Store Ambience', keys: ['Please rate us on the following - Store Ambience'] },
+    { label: 'Trial Room', keys: ['Please rate us on the following - Trial Room Experience'] },
+    { label: 'Product Options/Variety', keys: ['Please rate us on the following - Product Options/ Variety'] },
+    {
+      label: 'Cleanliness',
+      keys: [
+        'Please rate us on the following - Store Cleanliness',
+        'Store Cleanliness',
+        'Store Cleanliness & Hygiene',
+        'Store Hygiene',
+        'Cleanliness',
+        'Hygiene',
+      ],
+    },
+  ];
 
   useEffect(() => {
     if (open && stateName) {
@@ -346,6 +369,27 @@ export function StateDetailView({
       };
       setNPSMetrics(metrics);
 
+      // Calculate driver averages for the state
+      const stateAvgs: Array<{ label: string; avg: number | null; count: number }> =
+        DRIVER_FIELDS.map(({ label, keys }) => {
+          let sum = 0;
+          let count = 0;
+          stateData.forEach(r => {
+            const k = keys.find(
+              key => r[key] !== undefined && r[key] !== null && r[key] !== ''
+            );
+            if (!k) return;
+            const v = parseFloat(String(r[k]).trim());
+            if (Number.isFinite(v)) {
+              sum += v;
+              count++;
+            }
+          });
+          return { label, avg: count ? +(sum / count).toFixed(1) : null, count };
+        });
+
+      setStateDriverAverages(stateAvgs);
+
       // Extract comments with store and city info
       const extractedComments = stateData
         .map(record => ({
@@ -417,108 +461,51 @@ export function StateDetailView({
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
-              {/* State Info Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      State NPS
-                    </CardTitle>
+                  <CardHeader>
+                    <CardTitle>Current NPS</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div
-                      className="text-3xl font-bold"
-                      style={{ color: getNPSColor(npsMetrics.currentNPS) }}
-                    >
-                      {npsMetrics.currentNPS}
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      {npsMetrics.trend === 'improving' ? (
-                        <TrendingUp className="w-4 h-4 text-green-500" />
-                      ) : npsMetrics.trend === 'declining' ? (
-                        <TrendingDown className="w-4 h-4 text-red-500" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-500" />
-                      )}
-                      <span className="text-sm text-muted-foreground">
-                        {Math.abs(
-                          npsMetrics.currentNPS - npsMetrics.previousNPS
-                        )}{' '}
-                        pts from last period
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Coverage
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Cities
-                        </span>
-                        <span className="font-medium">
-                          {stateDetails.totalCities}
-                        </span>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-4xl font-bold" style={{ color: getNPSColor(npsMetrics.currentNPS) }}>
+                          {npsMetrics.currentNPS}
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Avg Score: {npsMetrics.avgScore.toFixed(1)}
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Stores
-                        </span>
-                        <span className="font-medium">
-                          {stateDetails.totalStores}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Responses
-                        </span>
-                        <span className="font-medium">
-                          {npsMetrics.totalResponses}
-                        </span>
+                      <div className="text-right">
+                        <div className="text-sm text-muted-foreground">Responses</div>
+                        <div className="text-2xl font-semibold">{npsMetrics.totalResponses}</div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Performance
-                    </CardTitle>
+                {/* Average Ratings (State) */}
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle>Average Ratings (State)</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Top City
-                        </span>
-                        <Badge variant="default" className="text-xs">
-                          {stateDetails.topCity}
-                        </Badge>
+                    {stateDriverAverages.every(d => !d.count) ? (
+                      <p className="text-muted-foreground text-sm">No driver ratings found for this state.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {stateDriverAverages.map(d => (
+                          <div key={d.label} className="p-3 rounded-md border bg-muted/30">
+                            <div className="text-xs text-muted-foreground">{d.label}</div>
+                            <div className="text-xl font-semibold mt-1">
+                              {d.avg !== null ? d.avg.toFixed(1) : '-'}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">{d.count} responses</div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Bottom City
-                        </span>
-                        <Badge variant="destructive" className="text-xs">
-                          {stateDetails.bottomCity}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Avg Score
-                        </span>
-                        <span className="font-medium">
-                          {npsMetrics.avgScore.toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

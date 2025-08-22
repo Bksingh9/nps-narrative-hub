@@ -82,6 +82,47 @@ export function StoreDetailView({
     Array<{ text: string; score: number; date: string }>
   >([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [driverAverages, setDriverAverages] = useState<
+    Array<{ label: string; avg: number | null; count: number }>
+  >([]);
+
+  const DRIVER_FIELDS: Array<{ label: string; keys: string[] }> = [
+    {
+      label: 'Staff Friendliness',
+      keys: ['Please rate us on the following - Staff Friendliness & Service'],
+    },
+    {
+      label: 'Billing Experience',
+      keys: ['Please rate us on the following - Billing Experience'],
+    },
+    {
+      label: 'Product Availability',
+      keys: ['Please rate us on the following - Product Size availability'],
+    },
+    {
+      label: 'Store Ambience',
+      keys: ['Please rate us on the following - Store Ambience'],
+    },
+    {
+      label: 'Trial Room',
+      keys: ['Please rate us on the following - Trial Room Experience'],
+    },
+    {
+      label: 'Product Options/Variety',
+      keys: ['Please rate us on the following - Product Options/ Variety'],
+    },
+    {
+      label: 'Cleanliness',
+      keys: [
+        'Please rate us on the following - Store Cleanliness',
+        'Store Cleanliness',
+        'Store Cleanliness & Hygiene',
+        'Store Hygiene',
+        'Cleanliness',
+        'Hygiene',
+      ],
+    },
+  ];
 
   useEffect(() => {
     if (open && storeCode) {
@@ -225,6 +266,27 @@ export function StoreDetailView({
         monthlyTrend,
       };
       setNPSMetrics(metrics);
+
+      // Calculate driver averages for this store
+      const averages: Array<{ label: string; avg: number | null; count: number }> =
+        DRIVER_FIELDS.map(({ label, keys }) => {
+          let sum = 0;
+          let count = 0;
+          storeData.forEach(r => {
+            const k = keys.find(
+              key => r[key] !== undefined && r[key] !== null && r[key] !== ''
+            );
+            if (!k) return;
+            const v = parseFloat(String(r[k]).trim());
+            if (Number.isFinite(v)) {
+              sum += v;
+              count++;
+            }
+          });
+          return { label, avg: count ? +(sum / count).toFixed(1) : null, count };
+        });
+
+      setDriverAverages(averages);
 
       // Extract comments
       const extractedComments = storeData
@@ -379,6 +441,34 @@ export function StoreDetailView({
                       </p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Average Ratings (Store) */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Average Ratings (Store)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {driverAverages.every(d => !d.count) ? (
+                    <p className="text-muted-foreground text-sm">
+                      No driver ratings found for this store.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {driverAverages.map(d => (
+                        <div key={d.label} className="p-3 rounded-md border bg-muted/30">
+                          <div className="text-xs text-muted-foreground">{d.label}</div>
+                          <div className="text-xl font-semibold mt-1">
+                            {d.avg !== null ? d.avg.toFixed(1) : '-'}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {d.count} responses
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
