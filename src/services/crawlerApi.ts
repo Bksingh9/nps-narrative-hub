@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:3001/api/crawler';
+const API_BASE_URL =
+  'https://api.impetusz0.de/service/public/nps-backend/api/crawler';
 
 export interface CrawlJob {
   url: string;
@@ -173,7 +174,9 @@ class CrawlerAPI {
   // Check if backend is running
   async checkHealth(): Promise<boolean> {
     try {
-      const response = await fetch('http://localhost:3001/health');
+      const response = await fetch(
+        'https://api.impetusz0.de/service/public/nps-backend/health'
+      );
       const data = await response.json();
       return data.status === 'ok';
     } catch {

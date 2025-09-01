@@ -147,7 +147,7 @@ export function DataExportButton({
 
       // Fetch current filtered data from backend
       const response = await fetch(
-        'http://localhost:3001/api/crawler/csv/filter',
+        'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -54,7 +54,7 @@ export default function CSVUploader() {
       formData.append('file', file);
 
       const response = await fetch(
-        'http://localhost:3001/api/crawler/csv/upload-realtime',
+        'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/upload-realtime',
         {
           method: 'POST',
           body: formData,

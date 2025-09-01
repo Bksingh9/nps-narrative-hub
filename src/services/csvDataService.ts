@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:3001/api/crawler';
+const API_BASE_URL =
+  'https://api.impetusz0.de/service/public/nps-backend/api/crawler';
 
 export interface CSVUploadResponse {
   success: boolean;

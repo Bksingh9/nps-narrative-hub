@@ -40,12 +40,14 @@ export default function DataDiagnostic() {
 
   const checkBackendStatus = async () => {
     try {
-      const healthResponse = await fetch('http://localhost:3001/health');
+      const healthResponse = await fetch(
+        'https://api.impetusz0.de/service/public/nps-backend/health'
+      );
       const healthData = await healthResponse.json();
 
       if (healthData.status === 'ok') {
         const dataResponse = await fetch(
-          'http://localhost:3001/api/crawler/csv/current-data'
+          'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/current-data'
         );
         const dataResult = await dataResponse.json();
         setBackendData(dataResult);

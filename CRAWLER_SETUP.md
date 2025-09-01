@@ -11,7 +11,7 @@ cd backend
 npm run dev
 ```
 
-The backend server will start on `http://localhost:3001`
+The backend server will start on `https://api.impetusz0.de/service/public/nps-backend`
 
 ### 2. Access the Crawler UI
 

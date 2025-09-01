@@ -129,7 +129,7 @@ export default function Upload() {
       formData.append('file', selectedFile);
 
       const response = await fetch(
-        'http://localhost:3001/api/crawler/csv/upload-realtime',
+        'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/upload-realtime',
         {
           method: 'POST',
           body: formData,

@@ -128,7 +128,7 @@ Your NPS Dashboard now has a **fully functional login system** matching the [pre
 - All navigation working
 
 ### 🚀 Backend Services:
-- **Main Server**: http://localhost:3001 ✅
+- **Main Server**: https://api.impetusz0.de/service/public/nps-backend ✅
 - **Frontend Dev**: http://localhost:8081 ✅
 - **Health Check**: /health endpoint ✅
 - **CSV Processing**: /api/crawler/csv/* ✅

@@ -16,14 +16,14 @@ export function CSVDataSync({ onDataLoaded }: CSVDataSyncProps) {
 
       // Check if data exists on backend
       const statusResponse = await fetch(
-        'http://localhost:3001/api/crawler/csv/current-data'
+        'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/current-data'
       );
       const statusResult = await statusResponse.json();
 
       if (statusResult.success && statusResult.hasData) {
         // Fetch filtered data
         const dataResponse = await fetch(
-          'http://localhost:3001/api/crawler/csv/filter',
+          'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter',
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

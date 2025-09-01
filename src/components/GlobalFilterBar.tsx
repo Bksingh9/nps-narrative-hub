@@ -92,7 +92,7 @@ export function GlobalFilterBar() {
       );
 
       const response = await fetch(
-        `http://localhost:3001/api/crawler/csv/filter-options?${params.toString()}`
+        `https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter-options?${params.toString()}`
       );
       const result = await response.json();
 
@@ -408,9 +408,7 @@ export function GlobalFilterBar() {
               <SelectTrigger id="city">
                 <SelectValue
                   placeholder={
-                    filters.state === 'all'
-                      ? 'All Cities'
-                      : 'All Cities'
+                    filters.state === 'all' ? 'All Cities' : 'All Cities'
                   }
                 />
               </SelectTrigger>
@@ -433,9 +431,7 @@ export function GlobalFilterBar() {
               onValueChange={value => handleFilterChange('storeCode', value)}
             >
               <SelectTrigger id="store">
-                <SelectValue
-                  placeholder={'All Stores'}
-                />
+                <SelectValue placeholder={'All Stores'} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Stores</SelectItem>
@@ -458,9 +454,7 @@ export function GlobalFilterBar() {
               <SelectTrigger id="region">
                 <SelectValue
                   placeholder={
-                    filters.state === 'all'
-                      ? 'All Regions'
-                      : 'All Regions'
+                    filters.state === 'all' ? 'All Regions' : 'All Regions'
                   }
                 />
               </SelectTrigger>

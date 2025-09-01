@@ -4,7 +4,7 @@
 
 ### 1. **Backend Server Status**
 - ✅ Backend server is **RUNNING** on port `3001`
-- ✅ Health endpoint working: `http://localhost:3001/health`
+- ✅ Health endpoint working: `https://api.impetusz0.de/service/public/nps-backend/health`
 - ✅ CSV data loaded: **7,442 records** available
 - ✅ All API endpoints operational
 
@@ -52,13 +52,13 @@ Created `/diagnostic` page with:
 ### Manual Data Sync
 ```bash
 # Check backend status
-curl http://localhost:3001/health
+curl https://api.impetusz0.de/service/public/nps-backend/health
 
 # Check data status
-curl http://localhost:3001/api/crawler/csv/current-data
+curl https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/current-data
 
 # Get filter options
-curl http://localhost:3001/api/crawler/csv/filter-options
+curl https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter-options
 ```
 
 ## 📊 Data Flow

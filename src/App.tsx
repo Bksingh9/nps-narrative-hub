@@ -30,24 +30,6 @@ import './App.css';
 
 function App() {
   useEffect(() => {
-    // Clear authentication on app load to ensure login page shows first
-    // This ensures users must log in each time they visit the app
-    const clearAuthOnLoad = () => {
-      // Check if this is a fresh app load (not a page navigation)
-      const isAppFreshLoad = !sessionStorage.getItem('app-loaded');
-
-      if (isAppFreshLoad) {
-        // Clear authentication data to force login
-        localStorage.removeItem('auth-token');
-        localStorage.removeItem('current-user');
-
-        // Mark that app has loaded in this session
-        sessionStorage.setItem('app-loaded', 'true');
-      }
-    };
-
-    clearAuthOnLoad();
-
     // Initialize app with API key and system configuration
     initializeApp();
   }, []);
@@ -66,13 +48,9 @@ function App() {
                 <Route
                   path="/"
                   element={
-                    authService.isAuthenticated() ? (
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    ) : (
-                      <Navigate to="/login" replace />
-                    )
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
                   }
                 />
 

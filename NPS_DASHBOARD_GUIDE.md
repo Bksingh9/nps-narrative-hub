@@ -5,7 +5,7 @@
 Your NPS Dashboard is now fully configured and running!
 
 - **Frontend URL**: http://localhost:8081
-- **Backend API**: http://localhost:3001
+- **Backend API**: https://api.impetusz0.de/service/public/nps-backend
 - **Default Login**: admin / admin123
 
 ## ✅ Issues Fixed

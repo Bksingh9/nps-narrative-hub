@@ -75,7 +75,7 @@ export function UniversalFilterBar({
   const loadFilterOptions = async () => {
     try {
       const response = await fetch(
-        'http://localhost:3001/api/crawler/csv/filter-options'
+        'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter-options'
       );
       const result = await response.json();
 
@@ -121,7 +121,7 @@ export function UniversalFilterBar({
 
     try {
       const response = await fetch(
-        'http://localhost:3001/api/crawler/csv/filter',
+        'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

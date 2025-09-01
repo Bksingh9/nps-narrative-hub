@@ -105,7 +105,7 @@ The backend provides these endpoints for your data:
 ## Troubleshooting
 
 ### Data Not Showing
-1. Check backend is running: `http://localhost:3001/health`
+1. Check backend is running: `https://api.impetusz0.de/service/public/nps-backend/health`
 2. Verify CSV upload succeeded (check console)
 3. Refresh the dashboard
 

@@ -127,6 +127,10 @@ class AuthService {
       const token = this.generateToken(demoUser.user);
       this.saveAuth(token, demoUser.user);
 
+      console.log('AuthService: User authenticated successfully');
+      console.log('AuthService: Token saved:', token ? 'Yes' : 'No');
+      console.log('AuthService: User saved:', demoUser.user);
+
       return {
         success: true,
         user: demoUser.user,
@@ -160,6 +164,11 @@ class AuthService {
     const token = this.getToken();
     const user = this.getCurrentUser();
 
+    console.log('AuthService: Checking authentication...');
+    console.log('AuthService: Token exists:', !!token);
+    console.log('AuthService: User exists:', !!user);
+    console.log('AuthService: Authentication result:', !!(token && user));
+
     // For demo, just check if token and user exist
     return !!(token && user);
   }
@@ -183,8 +192,22 @@ class AuthService {
 
   // Save authentication data
   private saveAuth(token: string, user: User): void {
-    localStorage.setItem(this.STORAGE_KEY, token);
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    try {
+      localStorage.setItem(this.STORAGE_KEY, token);
+      localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+
+      console.log('AuthService: Authentication data saved to localStorage');
+      console.log('AuthService: Storage key:', this.STORAGE_KEY);
+      console.log('AuthService: User key:', this.USER_KEY);
+
+      // Verify the data was saved
+      const savedToken = localStorage.getItem(this.STORAGE_KEY);
+      const savedUser = localStorage.getItem(this.USER_KEY);
+      console.log('AuthService: Verification - Token saved:', !!savedToken);
+      console.log('AuthService: Verification - User saved:', !!savedUser);
+    } catch (error) {
+      console.error('AuthService: Error saving to localStorage:', error);
+    }
   }
 
   // Generate mock JWT token

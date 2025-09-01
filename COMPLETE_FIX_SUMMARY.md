@@ -75,7 +75,7 @@
 | Component | Status | Description |
 |-----------|--------|-------------|
 | Frontend | ✅ Running | http://localhost:8081 |
-| Backend | ✅ Running | http://localhost:3001 |
+| Backend | ✅ Running | https://api.impetusz0.de/service/public/nps-backend |
 | Data | ✅ Loaded | 7,442 records active |
 | Filters | ✅ Working | Global synchronization |
 | Email | ✅ Configured | Ready to send alerts |

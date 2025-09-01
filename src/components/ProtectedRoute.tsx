@@ -35,6 +35,14 @@ export default function ProtectedRoute({
         const userRoleLevel = roleHierarchy[currentUser.role] || 0;
         const requiredRoleLevel = roleHierarchy[requiredRole] || 0;
 
+        console.log('Role check:', {
+          userRole: currentUser.role,
+          requiredRole,
+          userRoleLevel,
+          requiredRoleLevel,
+          hasAccess: userRoleLevel >= requiredRoleLevel,
+        });
+
         setHasAccess(userRoleLevel >= requiredRoleLevel);
       } else if (authenticated) {
         setHasAccess(true);

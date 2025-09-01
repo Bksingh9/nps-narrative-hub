@@ -25,8 +25,17 @@ class OpenAIService {
     // Try to get API key from localStorage or environment
     this.apiKey =
       localStorage.getItem('openai_api_key') ||
-      process.env.REACT_APP_OPENAI_API_KEY ||
+      import.meta.env.VITE_OPENAI_API_KEY ||
       null;
+
+    // Log for debugging (without exposing the actual key)
+    if (import.meta.env.VITE_OPENAI_API_KEY) {
+      console.log('OpenAI API key found in environment variables');
+    } else if (localStorage.getItem('openai_api_key')) {
+      console.log('OpenAI API key found in localStorage');
+    } else {
+      console.log('No OpenAI API key found - will use local insights fallback');
+    }
   }
 
   setApiKey(key: string) {

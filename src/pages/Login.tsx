@@ -53,6 +53,11 @@ export default function Login() {
       const response = await authService.login({ email, password });
 
       if (response.success) {
+        console.log('Login successful:', response);
+        console.log('Auth status after login:', authService.isAuthenticated());
+        console.log('Current user after login:', authService.getCurrentUser());
+        console.log('Token after login:', authService.getToken());
+
         toast.success(`Welcome back, ${response.user?.name}!`);
         navigate('/');
       } else {
@@ -84,6 +89,17 @@ export default function Login() {
         password: creds.password,
       });
       if (response.success) {
+        console.log('Demo login successful:', response);
+        console.log(
+          'Auth status after demo login:',
+          authService.isAuthenticated()
+        );
+        console.log(
+          'Current user after demo login:',
+          authService.getCurrentUser()
+        );
+        console.log('Token after demo login:', authService.getToken());
+
         toast.success(`Signed in to ${role} demo account`);
         navigate('/');
       } else {

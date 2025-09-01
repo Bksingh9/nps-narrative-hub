@@ -101,7 +101,7 @@ graph TD
 1. Check credentials are correct
 2. Verify services are running:
    - Frontend: http://localhost:8081
-   - Backend: http://localhost:3001
+   - Backend: https://api.impetusz0.de/service/public/nps-backend
 
 ## 📋 Quick Commands
 

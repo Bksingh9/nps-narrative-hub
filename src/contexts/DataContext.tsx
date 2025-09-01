@@ -264,7 +264,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       console.log('DataContext: Loading data from backend...');
 
       // First check if backend is available
-      const healthCheck = await fetch('http://localhost:3001/health');
+      const healthCheck = await fetch(
+        'https://api.impetusz0.de/service/public/nps-backend/health'
+      );
       if (!healthCheck.ok) {
         console.log('DataContext: Backend health check failed');
         return false;
@@ -272,7 +274,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       // Check current data status
       const statusResponse = await fetch(
-        'http://localhost:3001/api/crawler/csv/current-data'
+        'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/current-data'
       );
 
       if (!statusResponse.ok) {
@@ -287,7 +289,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
         // Fetch all data without filters first
         const response = await fetch(
-          'http://localhost:3001/api/crawler/csv/filter',
+          'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter',
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -372,7 +374,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       }
 
       const response = await fetch(
-        `http://localhost:3001/api/crawler/csv/filter-options?${params.toString()}`
+        `https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter-options?${params.toString()}`
       );
       const result = await response.json();
 
@@ -481,7 +483,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       // If backend is available, use it
       const response = await fetch(
-        'http://localhost:3001/api/crawler/csv/filter',
+        'https://api.impetusz0.de/service/public/nps-backend/api/crawler/csv/filter',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
